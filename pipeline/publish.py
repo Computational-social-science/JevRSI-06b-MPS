@@ -436,7 +436,22 @@ if __name__ == "__main__":
         print(render(r))
     if a.json:
         print(json.dumps(r.to_json(), indent=2))
-    # Exit 0 on a clean publish or a clean no-op. Exit 2 on a REFUSAL, so an
-    # operator (or a launchd log) can tell "nothing to do" from "held back".
-    raise SystemExit(0 if (r.may_publish or not r.staged) else 2)
+    # Three outcomes, three exit codes, so a launchd log or a monitor can tell
+    # them apart without parsing prose:
+    #
+    #   0  published, or there was genuinely nothing to publish
+    #   2  REFUSED — the gate stopped it and something WAS waiting
+    #   3  error — the publisher itself could not decide
+    #
+    # The previous version collapsed "refused" into "nothing to do" whenever the
+    # staged set happened to be empty, so a refusal during a quiet stretch exited
+    # 0 and looked identical to a successful no-op. An exit code that cannot
+    # distinguish the two is not a signal.
+    if not r.staged:
+        raise SystemExit(0)
+    if r.reasons and not r.may_publish:
+        raise SystemExit(2)
+    if r.may_publish:
+        raise SystemExit(0)
+    raise SystemExit(3)
 

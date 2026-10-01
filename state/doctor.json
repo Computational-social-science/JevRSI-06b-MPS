@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790836922.124583,
-  "when_h": "2026-10-01 14:42:02",
+  "when": 1790838040.267998,
+  "when_h": "2026-10-01 15:00:40",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 687s ago"
+            "last arm-log write 1805s ago"
           ],
           "repair": ""
         }
