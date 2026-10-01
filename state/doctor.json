@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790841149.9076102,
-  "when_h": "2026-10-01 15:52:29",
+  "when": 1790842289.407896,
+  "when_h": "2026-10-01 16:11:29",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "pgrep watchdog"
+            "this diagnosis is running inside the watchdog (pid 18663)"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 0s ago"
+            "last arm-log write 1092s ago"
           ],
           "repair": ""
         }
@@ -214,8 +214,8 @@
           "invariant": "I10",
           "title": "a published artifact reproduced its training run",
           "ok": true,
-          "severity": "info",
-          "detail": "every kept artifact verified; non-kept checkpoints are marked as evidence, not deliverables",
+          "severity": "critical",
+          "detail": "verified",
           "evidence": [
             "none pending"
           ],
@@ -312,25 +312,6 @@
             "1 null arm(s); a spread needs >= 2"
           ],
           "repair": ""
-        }
-      ]
-    },
-    "reproducible": {
-      "n": 1,
-      "ok": 1,
-      "critical": [],
-      "major": [],
-      "findings": [
-        {
-          "invariant": "C1",
-          "title": "the repository is reproducible from a clean clone",
-          "ok": true,
-          "severity": "info",
-          "detail": "conventions hold",
-          "evidence": [
-            "all conventions hold"
-          ],
-          "repair": "fix the convention violations; see tests/test_conventions.py"
         }
       ]
     }
