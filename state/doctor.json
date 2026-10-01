@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790866023.255278,
-  "when_h": "2026-10-01 22:47:03",
+  "when": 1790867828.689024,
+  "when_h": "2026-10-01 23:17:08",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -61,7 +61,7 @@
           "severity": "major",
           "detail": "a full disk kills an arm mid-write and takes the checkpoint",
           "evidence": [
-            "3706 GB free"
+            "3705 GB free"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 2156s ago"
+            "last arm-log write 3962s ago"
           ],
           "repair": ""
         }
@@ -355,10 +355,10 @@
           "severity": "info",
           "detail": "every running process postdates power.py and loop.py",
           "evidence": [
-            "dashboard.py (pid 59666, 60 min)",
-            "watchdog.py (pid 59670, 60 min)",
-            "daemon.py (pid 60540, 56 min)",
-            "run_one.py (pid 60549, 56 min)"
+            "dashboard.py (pid 59666, 90 min)",
+            "watchdog.py (pid 59670, 90 min)",
+            "daemon.py (pid 60540, 86 min)",
+            "run_one.py (pid 60549, 86 min)"
           ],
           "repair": ""
         },
