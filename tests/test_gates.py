@@ -75,7 +75,7 @@ def main() -> int:
 
     print("\nguard: general knowledge is not bought with forgetting (0.030)")
     p, f, _ = gate(arm(0.720, 0.600,
-                       cand={"td": 0.72, "mmlu_pro_guard": 0.50},
+                       cand={"td": 0.600 + B + 0.01, "mmlu_pro_guard": 0.50},
                        ctrl={"td": 0.60, "mmlu_pro_guard": 0.62}))
     check("a 0.12 guard loss fails", not p, str(f))
     check("  ... and fails it as its own named guard",
@@ -95,7 +95,7 @@ def main() -> int:
           len(f1) == 1 and f1[0].startswith("guard:"), str(f1))
     # A genuine two-guard failure: the guard AND a decision benchmark.
     _, f2, _ = gate(arm(0.720, 0.600,
-                        cand={"td": 0.72, "other": 0.50, "mmlu_pro_guard": 0.50},
+                        cand={"td": 0.600 + B + 0.01, "other": 0.50, "mmlu_pro_guard": 0.50},
                         ctrl={"td": 0.60, "other": 0.60, "mmlu_pro_guard": 0.62}))
     check("clears the bar + forgets AND regresses -> 2 guards -> rejected",
           len(f2) == 2, str(f2))
