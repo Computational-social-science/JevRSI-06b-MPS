@@ -80,3 +80,6 @@ __pycache__/
 # Mathlib revision, and a proof whose library version is not recorded cannot be
 # re-checked.
 formal/.lake/
+
+# upstream benchmark checkouts: fetched at pinned commits, verified by pipeline/bench_roots.py
+benchmarks/
