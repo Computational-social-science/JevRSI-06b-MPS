@@ -439,3 +439,4 @@ if __name__ == "__main__":
     # Exit 0 on a clean publish or a clean no-op. Exit 2 on a REFUSAL, so an
     # operator (or a launchd log) can tell "nothing to do" from "held back".
     raise SystemExit(0 if (r.may_publish or not r.staged) else 2)
+
