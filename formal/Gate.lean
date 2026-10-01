@@ -25,6 +25,14 @@ rounding, and a float proof would have to carry the rounding error through every
 step. Here the rounding does not appear at all, because it is not part of the
 claim.
 
+A note on how this is stated, because the first attempt got it wrong in an
+instructive way. To avoid a dependency, an earlier version declared its own
+four-field `OrderedAddGrp` carrying exactly the laws the proof invoked. It
+COMPILED, which is what made it dangerous: a bespoke class proves the theorems in
+a world nobody else writes in, and a proof is supposed to be checkable against
+the vocabulary the rest of the field uses. Mathlib is the right dependency here
+and the custom class is gone.
+
 It also means the model cannot drift from the numbers: the Python runs on IEEE-754
 doubles, and this file says nothing about doubles. The link between the two is
 `Gate.py`, which cross-checks Python's `gate()` against the `#eval` table at the
@@ -46,7 +54,7 @@ If someone later relaxes `0 < floor` to `0 ≤ floor` to accommodate a new
 experiment, these two are what make the cost of that change immediate.
 -/
 
-import Std
+import Mathlib.Tactic
 
 namespace Gate
 

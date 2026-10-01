@@ -1,0 +1,27 @@
+name = "gate"
+defaultTargets = ["Gate"]
+
+# Mathlib, not a hand-rolled ordered-group class.
+#
+# The first version of this development declared its own `OrderedAddGrp` carrying
+# the four laws the proof happened to use, to avoid a dependency. That is the
+# wrong instinct for a proof: a proof is supposed to be checkable against the
+# standard library the rest of the field uses, and a bespoke four-field class
+# means the theorems are true in a world nobody else writes in. The generalised
+# ordered-algebra hierarchy — AddCommGroup, LinearOrder, add_lt_add_left — is
+# exactly what the claim needs, and it is what a reader expects the word
+# "ordered group" to mean.
+#
+# Pinned to the toolchain this project already verified (4.34.1), because an
+# olean built by a different Lean is not loadable and the failure message does not
+# say so.
+# `rev`, not `version`: lake parses `version` as a semver constraint and rejects
+# the leading `v` ("invalid major version: expected numeral or wildcard, got
+# 'v4'"), so a git tag has to be given as a revision.
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+rev = "v4.34.1"
+
+[[lean_lib]]
+name = "Gate"

@@ -61,9 +61,17 @@ fi
 # 3. Extract somewhere disposable. Never into the final location: a partial
 #    extraction there is indistinguishable from a good install.
 STAGE=$(mktemp -d /tmp/lean-stage.XXXXXX)
-trap 'rm -rf "$STAGE"' EXIT
+trap 'rm -rf "$STAGE" "$STAGE.tar"' EXIT
 say "extracting to $STAGE ..."
-tar -xI zstd -C "$STAGE" --strip-components=1 -f "$ARCHIVE"
+# Decompress first, then untar. `tar -I zstd` looks the decompressor up on PATH,
+# and under launchd and under a non-login shell the Homebrew prefix is often
+# absent, so the two-step form fails where the one-step form would have worked
+# from an interactive terminal. Two steps, no PATH assumption.
+zstd_bin="$(command -v zstd || echo /opt/homebrew/bin/zstd)"
+[ -x "$zstd_bin" ] || { say "zstd not found; cannot decompress"; exit 8; }
+"$zstd_bin" -d -f -q "$ARCHIVE" -o "$STAGE.tar" || { say "decompress failed"; exit 8; }
+tar -xf "$STAGE.tar" -C "$STAGE" --strip-components=1
+rm -f "$STAGE.tar"
 [ -x "$STAGE/bin/lean" ] || { say "no bin/lean in the archive"; exit 4; }
 [ -f "$STAGE/lib/lean/libInit_shared.dylib" ] || {
   say "libInit_shared.dylib missing — the archive is incomplete"; exit 5; }
