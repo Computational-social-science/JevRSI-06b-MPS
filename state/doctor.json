@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790840102.874741,
-  "when_h": "2026-10-01 15:35:02",
+  "when": 1790840396.671607,
+  "when_h": "2026-10-01 15:39:56",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 68s ago"
+            "last arm-log write 120s ago"
           ],
           "repair": ""
         }
@@ -311,6 +311,25 @@
             "1 null arm(s); a spread needs >= 2"
           ],
           "repair": ""
+        }
+      ]
+    },
+    "reproducible": {
+      "n": 1,
+      "ok": 1,
+      "critical": [],
+      "major": [],
+      "findings": [
+        {
+          "invariant": "C1",
+          "title": "the repository is reproducible from a clean clone",
+          "ok": true,
+          "severity": "info",
+          "detail": "conventions hold",
+          "evidence": [
+            "all conventions hold"
+          ],
+          "repair": "fix the convention violations; see tests/test_conventions.py"
         }
       ]
     }

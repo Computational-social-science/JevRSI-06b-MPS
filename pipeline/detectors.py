@@ -44,6 +44,12 @@ DETECTORS: frozenset[str] = frozenset({
     # the credential pattern is a compiled regex in its source.
     "publish.py",
     "test_publish.py",
+    # The conventions checker, and the test that plants a Chinese docstring and
+    # a machine path to prove the checker bites. Fifth occurrence of this class
+    # in this project; the reason it is in this file rather than in a local
+    # exemption in the test is that the previous four fixes each put it in a
+    # different place and each was forgotten by the next detector.
+    "test_conventions.py",
     # The multi-lens doctor imports the cost scanner's subject matter.
     "doctor.py",
 })

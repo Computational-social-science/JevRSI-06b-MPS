@@ -134,16 +134,50 @@ def _body() -> int:
     print("\nthe real pipeline is diagnosed by the real path")
     r = doctor.diagnose()
     check("diagnose() runs and returns a report", isinstance(r, doctor.Report))
-    check("it names all five auditors",
+    check("it names all six auditors",
           set(r.auditors) == {"vitals", "provenance", "methodology", "integrity",
-                              "adversary"},
+                              "adversary", "reproducible"},
           str(sorted(r.auditors)))
+    check("the reproducibility lens runs the conventions test rather than "
+          "reimplementing it",
+          any(str(f.get("invariant", "")) == "C1"
+              for f in r.auditors["reproducible"]["findings"]),
+          "a second implementation would be a second thing to drift")
     check("the adversary lens recomputes numbers rather than reading the record",
           any(str(f.get("invariant", "")).startswith("A")
               for f in r.auditors["adversary"]["findings"]),
           "provenance and methodology are transcription checks; this one is not")
     check("the live pipeline is currently healthy", r.ok,
           f"{r.verdict}: crit={r.criticals} maj={r.majors}")
+
+    print("\nthe reproducibility lens must bite, or it is decoration")
+    import subprocess as _sp
+    probe = ROOT / "pipeline" / "_convention_probe.py"
+    saved_req = (ROOT / "requirements.txt").read_text()
+    try:
+        # Unpin one dependency. Reproducibility is exactly this claim.
+        probe.write_text("# planted by test_doctor\n")
+        (ROOT / "requirements.txt").write_text("torch>=2.0\n")
+        _sp.run(["git", "-C", str(ROOT), "add", "-A"], capture_output=True)
+        # `arbitrate` takes the lens OUTPUT (a list of findings); it does not
+        # return one. The first version of this probe passed a Report and
+        # iterated it, which fails for a reason that has nothing to do with what
+        # it is testing.
+        _, findings = doctor.auditor_reproducible()
+        c1 = next((f for f in findings if f.invariant == "C1"), None)
+        check("C1 fires when a dependency is unpinned",
+              c1 is not None and not c1.ok, (c1.detail[:60] if c1 else "missing"))
+        check("... and is at least major",
+              c1 is not None and c1.severity in ("major", "critical"),
+              c1.severity if c1 else "")
+    finally:
+        probe.unlink(missing_ok=True)
+        (ROOT / "requirements.txt").write_text(saved_req)
+        _sp.run(["git", "-C", str(ROOT), "add", "-A"], capture_output=True)
+    _, findings3 = doctor.auditor_reproducible()
+    c1b = next((f for f in findings3 if f.invariant == "C1"), None)
+    check("... and is quiet again once the pin is restored", c1b is not None and c1b.ok,
+          c1b.detail[:50] if c1b else "C1 missing")
 
     print(f"\n{len(FAILS)} failure(s)" if FAILS else "\nALL PASS")
     return 1 if FAILS else 0

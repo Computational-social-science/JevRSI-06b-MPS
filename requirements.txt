@@ -1,0 +1,24 @@
+# Dependencies, pinned to the exact versions this search ran on.
+#
+# Pinned rather than ranged, because the claim this repository makes is that its
+# numbers are reproducible. A `>=` on torch is a search whose results drift with
+# whatever the resolver picked on the day it was cloned, and every number in
+# `records/arms.jsonl` would then be a number from an environment nobody can
+# reconstruct. The versions below are the ones the recorded arms were measured
+# under; changing them invalidates the comparison rather than improving it.
+#
+# Deliberately absent: any HTTP or web framework. The dashboard is stdlib
+# `http.server` on purpose — a monitor that is part of the project's own evidence
+# should have no dependencies to install, pin or patch, and one fewer thing to
+# go wrong at 3am.
+#
+# The 0.6B backbone weights come from the HuggingFace Hub, anonymously, through
+# the domestic mirror declared in `pipeline/dev.py`.
+
+torch==2.14.0
+transformers==5.17.0
+datasets==5.0.1
+safetensors==0.8.0
+tokenizers==0.23.2
+huggingface_hub==1.33.0
+numpy==2.5.3

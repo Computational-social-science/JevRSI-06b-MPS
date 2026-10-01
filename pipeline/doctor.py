@@ -195,8 +195,36 @@ def auditor_adversary() -> tuple[str, list[Finding]]:
     return "adversary", adversary.probe(arms)
 
 
+def auditor_reproducible() -> tuple[str, list[Finding]]:
+    """Could a stranger clone this and rerun it?
+
+    Run `tests/test_conventions.py` as a SUBPROCESS and report its result, rather
+    than reimplementing any of it. A convention checker that exists only in the
+    test suite is a wish rather than a rule: it runs when someone remembers to
+    run it, and never at 3am. Reimplementing the checks here would create a
+    second version to drift, which is the failure this project has now collected
+    five of.
+    """
+    import os
+    env = dict(os.environ)
+    env["PYTHONDONTWRITEBYTECODE"] = "1"
+    r = subprocess.run(
+        [sys.executable, str(ROOT / "tests" / "test_conventions.py")],
+        cwd=ROOT, capture_output=True, text=True, timeout=300, env=env)
+    fails = [l.strip() for l in r.stdout.splitlines() if l.strip().startswith("FAIL")]
+    ev = (fails[:4] or ["all conventions hold"])
+    return "reproducible", [Finding(
+        "C1", "the repository is reproducible from a clean clone", ok=r.returncode == 0,
+        severity="major" if r.returncode else "info",
+        detail=("a hardcoded path, an unpinned dependency, a missing licence or "
+                "non-English documentation means the numbers cannot be re-derived"
+                if r.returncode else "conventions hold"),
+        evidence=ev,
+        repair="fix the convention violations; see tests/test_conventions.py")]
+
+
 AUDITORS = (auditor_vitals, auditor_provenance, auditor_methodology,
-            auditor_integrity, auditor_adversary)
+            auditor_integrity, auditor_adversary, auditor_reproducible)
 
 
 # -------------------------------------------------------------------- arbiter
@@ -238,7 +266,7 @@ def arbitrate(reports: dict[str, list[Finding]]) -> Report:
     # and would make WRONG stop meaning anything.
     meth_crit = [c for c in rep.criticals + rep.majors
                  if c.startswith(("methodology", "provenance", "integrity",
-                                   "adversary"))]
+                                   "adversary", "reproducible"))]
 
     # WRONG beats BROKEN. A dead process announces itself; a live one publishing
     # numbers that violate the protocol does not, and will not stop on its own.
