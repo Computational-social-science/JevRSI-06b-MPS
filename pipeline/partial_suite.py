@@ -62,27 +62,81 @@ sys.path.insert(0, str(ROOT))
 # project cannot currently see: the primary target and the general-knowledge guard.
 LOCAL_LOADABLE = ("typed_decisions_test", "mmlu_pro_1k")
 
+# The rest needs a checkout or a published input, and `bench_roots` decides which.
+# Importing it here is what makes this file honest: it sets the loader's roots from
+# config/benchmarks.json and checks each checkout's HEAD against upstream's pin.
+try:
+    import bench_roots
+    bench_roots.roots()
+except Exception:
+    pass
 
-def named_benchmarks() -> list[tuple[str, float, str]]:
-    """(name, weight, why it is not in this partial run), for every benchmark left out."""
+
+def obtainable() -> list[str]:
+    """Every benchmark this machine can actually load, in upstream's v3 weighting.
+
+    The checkouts are verified by `bench_roots` against upstream's pins, so a
+    benchmark is only offered here if the split it reads is the split upstream
+    pinned. Nothing is offered on the strength of a directory existing.
+    """
     from rsijev.targets_suite import SUITES
+    names = list(LOCAL_LOADABLE)
+    try:
+        import bench_roots
+        for r in bench_roots.verify():
+            if r["at_pin"]:
+                names.extend(r["benchmarks"])
+    except Exception:
+        pass
+    return [n for n in SUITES["v3"] if n in set(names)]
+
+
+def named_benchmarks(scored: set[str] | None = None) -> list[tuple[str, float, str]]:
+    """(name, weight, why it is not in this partial run), for every benchmark left out.
+
+    Defined against what was SCORED, not against what was obtainable. A benchmark
+    the manifest claims and that then fails to build -- `nimble_public`, whose panel
+    needs an input upstream has not published -- belongs here with its reason, or it
+    appears in no list at all: not scored, not named. That is the failure this file
+    exists to prevent, and `tests/test_suite_coverage.py` caught it doing exactly
+    that on its first run.
+    """
+    from rsijev.targets_suite import SUITES
+    have = set(scored) if scored is not None else set(obtainable())
     out = []
     for name, w in sorted(SUITES["v3"].items(), key=lambda kv: -kv[1]):
-        if name in LOCAL_LOADABLE:
+        if name in have:
             continue
-        if name == "tasksource_jev_test":
-            why = "held out: upstream scores it once per release, never during the search"
-        elif name in ("semif_external", "scienthoon_ood"):
-            why = "held out for the same reason, and we have not spent it either"
+        if name == "nimble_public":
+            why = ("NEEDS AN UNPUBLISHED INPUT. Upstream's rsijev/README.md: \"Two "
+                   "inputs are still not published, and they are data rather than "
+                   "code ... --suite-dir is the frozen suite definitions with the "
+                   "decontaminated test splits.\" The checkout ships the 13 committed "
+                   "subset MANIFESTS (the shas) and not the data, so the panel cannot "
+                   "be rebuilt here -- or anywhere, by anyone, today.")
+        elif name in ("semif_external", "scienthoon_ood", "tasksource_jev_test"):
+            why = "HELD OUT upstream (scored once per release, never during the search); the repository does not resolve either"
+        elif name == "jev_style_panel":
+            why = "chaoliangUNSW/ChatDev does not resolve. Decisions in Jev's own house style -- its absence most changes what a suite number means"
         else:
-            why = "needs a local upstream checkout (KEV_ROOT / NIMBLE_ROOT / JEVBENCH_ROOT)"
+            why = "its pinned repository does not resolve"
         out.append((name, w, why))
     return out
 
 
 def partial_mean() -> dict:
     from rsijev import targets_suite as ts
-    got = ts.load_suite(list(LOCAL_LOADABLE), decontam=False, suite="v3")
+    want = obtainable()
+    got, failed = {}, {}
+    for n in want:
+        # One at a time, so a benchmark that cannot be built is NAMED rather than
+        # taking the whole run down with it. `load_suite` stops at the first
+        # failure, and a partial suite is a legitimate state precisely because it
+        # is reported.
+        try:
+            got.update(ts.load_suite([n], decontam=False, suite="v3"))
+        except Exception as exc:
+            failed[n] = f"{type(exc).__name__}: {str(exc)[:90]}"
     w = ts.SUITES["v3"]
     scored = {n: w[n] for n in got}
     total = sum(scored.values())
@@ -95,7 +149,8 @@ def partial_mean() -> dict:
                    for n in got},
         "weight_covered": total,
         "coverage": f"{len(got)} of {len(w)} benchmarks, {total * 100:.1f}% of the suite weight",
-        "omitted": named_benchmarks(),
+        "failed_to_load": failed,
+        "omitted": named_benchmarks(set(got)),
         "decontam": "upstream's SUITE_DECONTAM report describes THEIR training data; "
                     "ours differs, so it is not applied. Our authority is "
                     "pipeline/contamination.py, per arm, on the loaded corpus.",
@@ -120,6 +175,12 @@ def main() -> int:
     for n, d in r["scored"].items():
         print(f"  {n:22s} w {d['weight_upstream']:.3f} -> {d['weight_renormalised']:.4f}   "
               f"{d['cases']} cases, {d['questions']} questions")
+    tot_q = sum(d["questions"] for d in r["scored"].values())
+    print(f"\n  {tot_q} questions across {len(r['scored'])} benchmarks")
+    if r["failed_to_load"]:
+        print("\n  present but NOT loadable:")
+        for n, why in r["failed_to_load"].items():
+            print(f"    {n:22s} {why}")
     print(f"\n  decontamination: {r['decontam']}")
     print(f"\n  NOT covered — a number from here is not a suite number:")
     for n, wt, why in r["omitted"]:

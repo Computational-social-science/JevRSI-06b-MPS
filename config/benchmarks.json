@@ -22,7 +22,12 @@
       "pin": "569ea449b1033c5aa8f149ec5e20d0c7a296d24a",
       "url": "https://github.com/jaredpalmer/kev.git",
       "licence": "Apache-2.0",
-      "benchmarks": ["kev_transfer_v4", "kev_hard_v1", "kev_documents_v1", "kev_devtools_v1"],
+      "benchmarks": [
+        "kev_transfer_v4",
+        "kev_hard_v1",
+        "kev_documents_v1",
+        "kev_devtools_v1"
+      ],
       "weight": 0.212,
       "note": "four benchmarks, the largest single block of the suite"
     },
@@ -32,7 +37,10 @@
       "pin": "62076b4f2d365b5879dafcf7f6dd072a1fe76df7",
       "url": "https://github.com/bespokelabsai/nimble.git",
       "licence": "per subset: CC BY-SA 3.0/4.0, CC BY 4.0, CC0, MIT, PAWS free use",
-      "benchmarks": ["nimble_public", "nimble_holdout"],
+      "benchmarks": [
+        "nimble_public",
+        "nimble_holdout"
+      ],
       "weight": 0.162,
       "note": "nimble_public is the second-largest weight in the suite; its public subsets are rebuilt by sha, not taken from docs/"
     },
@@ -42,7 +50,9 @@
       "pin": "26eb72d4e0e60d8ace0adfc77a384063442561cd",
       "url": "https://github.com/fstandhartinger/jevbench.git",
       "licence": "MIT",
-      "benchmarks": ["jevbench_public"],
+      "benchmarks": [
+        "jevbench_public"
+      ],
       "weight": 0.049,
       "note": "the pin is not a branch or tag tip, so it cannot be resolved with ls-remote; the history has to be walked"
     },
@@ -52,7 +62,9 @@
       "pin": "10ad6888",
       "url": "https://github.com/ZefanCai/Open-Jev-v1.1.git",
       "licence": "CC0-1.0 / CC-BY-4.0",
-      "benchmarks": ["open_jev_ood"],
+      "benchmarks": [
+        "open_jev_ood"
+      ],
       "weight": 0.032,
       "note": "UNOBTAINABLE as of 2026-10-01: the repository does not resolve. Recorded so the gap is a decision on the record rather than a silence."
     },
@@ -62,7 +74,9 @@
       "pin": "b4f55bea",
       "url": "https://github.com/tasksource/procedural-typed-decisions.git",
       "licence": "Apache-2.0",
-      "benchmarks": ["procedural_test"],
+      "benchmarks": [
+        "procedural_test"
+      ],
       "weight": 0.033,
       "note": "UNOBTAINABLE as of 2026-10-01: the repository does not resolve."
     },
@@ -72,7 +86,9 @@
       "pin": "119a1645",
       "url": "https://github.com/tasksource/tasksource-jev-typed-decisions.git",
       "licence": "other (unstated)",
-      "benchmarks": ["tasksource_jev_test"],
+      "benchmarks": [
+        "tasksource_jev_test"
+      ],
       "weight": 0.05,
       "note": "UNOBTAINABLE at the pinned path as of 2026-10-01. This is a HELD-OUT benchmark upstream, scored once per release; this project holds out tasksource/tasksource at its own pin, which is a different repository and therefore not a substitute."
     },
@@ -82,7 +98,9 @@
       "pin": null,
       "url": "https://github.com/TheoLeeCJ/SemIf.git",
       "licence": "MIT",
-      "benchmarks": ["semif_external"],
+      "benchmarks": [
+        "semif_external"
+      ],
       "weight": 0.05,
       "note": "UNOBTAINABLE, and upstream says so itself: its --list records 'TheoLeeCJ/SemIf, repo now private'. A HELD-OUT benchmark. The ceiling on suite fidelity is upstream's own, not ours."
     },
@@ -92,9 +110,13 @@
       "pin": "data_manifest revisions, seed 20260923",
       "url": "https://github.com/chaoliangUNSW/ChatDev.git",
       "licence": "per upstream (AG News, ANLI CC BY-NC 4.0, BoolQ CC BY-SA 3.0, emotion, Enron, HANS MIT, IMDB, GLUE)",
-      "benchmarks": ["jev_style_panel"],
+      "benchmarks": [
+        "jev_style_panel"
+      ],
       "weight": 0.081,
       "note": "UNOBTAINABLE as of 2026-10-01: chaoliangUNSW/ChatDev does not resolve. Second-largest gap, and the panel is decisions in Jev's own house style, so it is the one whose absence most changes what a suite number means."
     }
-  }
+  },
+  "coverage_floor": 0.583,
+  "_coverage_floor_why": "Measured 2026-10-01 with three checkouts at their pins and two Hub datasets. A fall below this means a checkout went missing or a pin stopped resolving, and the renormalised mean would be over a different denominator -- which is a finding, not a rounding, so it fails the build."
 }
