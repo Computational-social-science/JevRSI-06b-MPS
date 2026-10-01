@@ -1,8 +1,8 @@
 {
   "verdict": "wrong",
   "ok": false,
-  "when": 1790858979.216624,
-  "when_h": "2026-10-01 20:49:39",
+  "when": 1790860123.918903,
+  "when_h": "2026-10-01 21:08:43",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "this diagnosis is running inside the watchdog (pid 21114)"
+            "this diagnosis is running inside the watchdog (pid 49002)"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 1532s ago"
+            "last arm-log write 2677s ago"
           ],
           "repair": ""
         }
@@ -333,56 +333,60 @@
     "reproducible": {
       "n": 2,
       "ok": 1,
-      "critical": [
-        "C2 the RUNNING loop uses the science currently on disk"
+      "critical": [],
+      "major": [
+        "C1 the repository is reproducible from a clean clone"
       ],
-      "major": [],
       "findings": [
         {
           "invariant": "C2",
           "title": "the RUNNING loop uses the science currently on disk",
-          "ok": false,
-          "severity": "critical",
-          "detail": "the loop is gating with modules older than the ones on disk: pipeline/power.py edited after watchdog.py (pid 21114) started; pipeline/loop.py edited after watchdog.py (pid 21114) started; pipeline/power.py edited after dashboard.py (pid 23147) started",
-          "evidence": [],
-          "repair": "restart the daemon so the corrected gate takes effect; the arm in flight is left to finish"
+          "ok": true,
+          "severity": "info",
+          "detail": "every running process postdates power.py and loop.py",
+          "evidence": [
+            "dashboard.py (pid 47788, 4 min)",
+            "daemon.py (pid 48998, 0 min)",
+            "watchdog.py (pid 49002, 0 min)"
+          ],
+          "repair": ""
         },
         {
           "invariant": "C1",
           "title": "the repository is reproducible from a clean clone",
-          "ok": true,
-          "severity": "info",
-          "detail": "conventions hold",
+          "ok": false,
+          "severity": "major",
+          "detail": "a hardcoded path, an unpinned dependency, a missing licence or non-English documentation means the numbers cannot be re-derived",
           "evidence": [
-            "all conventions hold"
+            "FAIL  no commit since vendoring has touched the vendored tree  [1 commit(s) \u2014 vendoring is only worth doing if the vendored code is left alone]"
           ],
           "repair": "fix the convention violations; see tests/test_conventions.py"
         }
       ]
     }
   },
-  "criticals": [
-    "reproducible/C2"
+  "criticals": [],
+  "majors": [
+    "reproducible/C1"
   ],
-  "majors": [],
   "minors": [],
-  "diagnosis": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.  HALTED: the loop will not propose another arm until a human gives a reason. The arm in flight is left to finish.",
+  "diagnosis": "the loop is running but the SCIENCE is not: reproducible/C1. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.  HALTED: the loop will not propose another arm until a human gives a reason. The arm in flight is left to finish.",
   "halt": {
     "active": true,
-    "reason": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
-    "since": 1790854338.778909,
-    "since_h": "2026-10-01 19:32:18",
+    "reason": "the loop is running but the SCIENCE is not: reproducible/C1. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
+    "since": 1790860123.9200158,
+    "since_h": "2026-10-01 21:08:43",
     "findings": [
-      "reproducible/C2"
+      "reproducible/C1"
     ],
     "unreadable": false
   },
   "repairs": [
     {
-      "finding": "reproducible/C2",
-      "action": "restart the daemon so the corrected gate takes effect; the arm in flight is left to finish",
+      "finding": "reproducible/C1",
+      "action": "fix the convention violations; see tests/test_conventions.py",
       "safe_unattended": true,
-      "detail": "the loop is gating with modules older than the ones on disk: pipeline/power.py edited after watchdog.py (pid 21114) started; pipeline/loop.py edited after watchdog.py (pid 21114) started; pipeline/power.py edited after dashboard.py (pid 23147) started"
+      "detail": "a hardcoded path, an unpinned dependency, a missing licence or non-English documentation means the numbers cannot be re-derived"
     }
   ],
   "needs_human": false

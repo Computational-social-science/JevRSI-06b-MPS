@@ -80,10 +80,27 @@ def main() -> int:
     check("a 0.12 guard loss fails", not p, str(f))
     check("  ... and fails it as its own named guard",
           any(g.startswith("guard:") for g in f), str(f))
+    # A 0.02 guard move is INSIDE upstream's 0.030 tolerance and outside nothing
+    # else -- under the plain rule it passes. It no longer passes, and that is the
+    # correction of 2026-10-01 rather than a regression: the guard's own measured
+    # spread over four replicas of this recipe is 0.0202, so 0.02 sits inside
+    # 0.030 +/- 0.0202. A tolerance checked against a difference smaller than the
+    # measurement's own noise is a coin flip wearing a threshold's clothes, and it
+    # had already crowned one keeper on a lucky seed. So the band turns "tolerated"
+    # into "unresolved", which routes to the repair path -- upstream's own
+    # disposition for an arm that fails exactly one guard. Both readings are
+    # asserted here, because the interesting claim is not the verdict but the fact
+    # that the verdict is now a function of the measured band.
     p, f, _ = gate(arm(0.600 + B + 0.01, 0.600,
                        cand={"td": 0.600 + B + 0.01, "mmlu_pro_guard": 0.58},
                        ctrl={"td": 0.60, "mmlu_pro_guard": 0.60}))
-    check("a 0.02 guard move is tolerated", p, str(f))
+    check("a 0.02 guard move is no longer silently tolerated", not p, str(f))
+    check("  ... it is UNRESOLVED, not a failure: inside the measured band",
+          any(g.endswith(":unresolved") for g in f), str(f))
+    p, f, _ = gate(arm(0.600 + B + 0.01, 0.600,
+                       cand={"td": 0.600 + B + 0.01, "mmlu_pro_guard": 0.595},
+                       ctrl={"td": 0.60, "mmlu_pro_guard": 0.60}))
+    check("a 0.005 guard move, inside the noise, still passes outright", p, str(f))
 
     print("\nverdicts: one failed guard is a repair, two is a death")
     # A guard-target loss alone is exactly ONE failed guard, because the guard

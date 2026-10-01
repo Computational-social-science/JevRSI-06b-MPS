@@ -129,6 +129,7 @@ def main() -> int:
 
     last_repair = 0.0
     last_stale_restart = 0.0
+    last_loop_start = 0.0
     while True:
         # The doctor runs FIRST and outranks everything below. The other checks
         # ask "is it up"; the doctor asks "is it up AND running the science we
@@ -196,6 +197,38 @@ def main() -> int:
             log(f"DOCTOR    could not run: {type(exc).__name__}: {exc}")
 
         problems: list[str] = []
+
+        # START THE LOOP IF NOTHING IS STOPPING IT. The loop job is a
+        # `StartInterval: 10800`, so launchd re-invokes it every three hours
+        # whatever it exits with -- `ThrottleInterval` does not apply to that kind
+        # of job, and the daemon's own comment believed it did. A halt therefore
+        # stalled the search for three hours after the halt was cleared, and
+        # `launchctl list` showed the job as `3`, which reads as a crash. Fifteen
+        # minutes is the cadence a supervisor should be keeping, and it is the
+        # cadence this watchdog already runs at.
+        #
+        # The condition is deliberately narrow. It starts the loop only when there
+        # is no halt, no arm already running, and no daemon already running -- so
+        # it cannot become the second writer of `records/arms.jsonl`, which is the
+        # failure V2 exists to catch.
+        # `doctor` and `os` are bound by the try above, and a failure there must not
+        # take the supervisor down with it: the whole point of this block is to
+        # keep the loop alive. So it re-checks for itself and never raises.
+        try:
+            import halt as _haltmod
+            _h = _haltmod.status()
+            _scripts = [s for _, _, s in doctor.self_processes()]
+            if (not _h.active and not doctor.arm_pids()
+                    and "daemon.py" not in _scripts
+                    and time.time() - last_loop_start > REPAIR_BACKOFF_S):
+                last_loop_start = time.time()
+                subprocess.run(["launchctl", "kickstart", "-k",
+                                f"gui/{os.getuid()}/com.research.rsijev"],
+                               capture_output=True, text=True)
+                log("LOOP      not running and nothing is holding it; started it "
+                    "(StartInterval alone re-checks only every 3h)")
+        except Exception as exc:
+            log(f"LOOP      could not check the loop: {type(exc).__name__}: {exc}")
 
         if not caffeinate_alive():
             problems.append("machine could sleep (caffeinate dead)")

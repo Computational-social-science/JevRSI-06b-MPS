@@ -1,10 +1,8 @@
 {
-  "active": true,
-  "reason": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
-  "since": 1790854338.778909,
-  "since_h": "2026-10-01 19:32:18",
-  "findings": [
-    "reproducible/C2"
-  ],
+  "active": false,
+  "reason": "",
+  "since": 0.0,
+  "since_h": "",
+  "findings": [],
   "unreadable": false
 }

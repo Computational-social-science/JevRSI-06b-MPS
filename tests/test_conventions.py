@@ -25,6 +25,7 @@
 """
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -195,19 +196,45 @@ def main() -> int:
     # "Unchanged SINCE IT WAS VENDORED", not "never touched". The commit that
     # added the vendored tree necessarily touches it, so the first version of this
     # check reported a violation on a repository whose vendoring was perfect.
-    root = subprocess.run(["git", "-C", str(ROOT), "rev-list", "--max-parents=0", "HEAD"],
-                          capture_output=True, text=True).stdout.strip().splitlines()
-    root = root[0] if root else None
-    if not root:
-        check("the vendored tree is unchanged since vendoring", False, "no root commit")
+    #
+    # It then asked the question by COMMIT — "has anything under rsijev/ been
+    # touched since?" — which cannot tell the difference between editing vendored
+    # CODE and repairing the vendor SURFACE. On 2026-10-01 that made the check
+    # forbid exactly the repairs the manifest exists to authorise: adding
+    # rsijev/targets_suite.py, which scripts/suite.py imports and which was
+    # missing, and removing the out-of-scope vision lineage. Both are changes to
+    # which files are here, not to what any of them says.
+    #
+    # So the question is asked of the CONTENT, which is the thing the claim is
+    # actually about: every file the manifest calls vendored must still hash to
+    # the blob the manifest recorded. Adding a file the manifest lists, or
+    # changing which files are listed, is a manifest edit and is reviewed as one;
+    # changing the bytes of a vendored file is the violation this is after.
+    man = ROOT / "rsijev" / ".upstream_manifest.json"
+    if not man.is_file():
+        check("the vendor manifest exists, so verbatim is checkable", False,
+              "rsijev/.upstream_manifest.json absent — without it 'unchanged since "
+              "vendoring' is an opinion")
     else:
-        r = subprocess.run(
-            ["git", "-C", str(ROOT), "log", "--oneline", f"{root}..HEAD", "--", "rsijev/"],
-            capture_output=True, text=True)
-        after = [l for l in r.stdout.splitlines() if l.strip()]
-        check("no commit since vendoring has touched the vendored tree", not after,
-              f"{len(after)} commit(s) — vendoring is only worth doing if the "
-              f"vendored code is left alone")
+        import hashlib as _h
+        _m = json.loads(man.read_text())
+        drifted, missing = [], []
+        for _p, _rec in sorted(_m["files"].items()):
+            if _rec.get("status") != "vendored":
+                continue
+            _f = ROOT / _p
+            if not _f.is_file():
+                missing.append(_p); continue
+            _d = _f.read_bytes()
+            _b = _h.sha1(b"blob %d\0" % len(_d) + _d).hexdigest()
+            if _b != _rec.get("blob"):
+                drifted.append(_p)
+        check("every vendored file still hashes to what the manifest recorded",
+              not drifted and not missing,
+              "; ".join((drifted + missing)[:4]) or
+              f"{sum(1 for r in _m['files'].values() if r.get('status') == 'vendored')} "
+              f"vendored files, byte-identical to upstream "
+              f"{_m.get('vendored_at', '?')[:12]}")
         # And confirm the exemption did not quietly widen: the vendored files
         # must still be non-empty, because an empty directory passes "unchanged".
         n = len([f for f in files if is_vendored(f)])

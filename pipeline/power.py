@@ -430,6 +430,7 @@ def main() -> int:
         planned = _c.seeds_for("decisive")
 
     deltas: list[float] = []
+    gdeltas: list[float] = []
     if a.from_arms:
         import agenda as _ag
         recs = []
@@ -438,12 +439,19 @@ def main() -> int:
                 recs.append(json.loads(line))
         # Only the null series, by the agenda's definition -- not every record.
         deltas = _ag.null_deltas(recs)
-        print(f"  read {len(recs)} record(s), {len(deltas)} of them null-series")
+        # The guard's own series goes through the same path. It did not, once: the
+        # CLI re-derived the bar without it and overwrote the state file, which
+        # silently disarmed the guard band in `loop.gate` until the next null arm
+        # landed. A second implementation of the rule is not a convenience, it is
+        # a way for the recorded numbers and the applied ones to part company.
+        gdeltas = _ag.null_guard_deltas(recs)
+        print(f"  read {len(recs)} record(s), {len(deltas)} of them null-series, "
+              f"{len(gdeltas)} with a guard delta")
     else:
         import sys
         deltas = [float(x) for x in sys.stdin.read().split() if x.strip()]
 
-    res = analyse(deltas, planned_seeds=planned)
+    res = analyse(deltas, planned_seeds=planned, guard_deltas=gdeltas)
     print("POWER ANALYSIS")
     print("  " + res.verdict)
     p = save(res)

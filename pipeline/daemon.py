@@ -111,11 +111,17 @@ def main() -> int:
     import halt as haltmod
     h = haltmod.status()
     if h.active:
-        # launchd retries every ThrottleInterval, which is what makes the search
-        # resume on its own once a human clears the halt. That also means this
-        # branch runs every two minutes for as long as the halt stands, so the
-        # full explanation is printed once and afterwards reduced to one line. A
-        # halt that fills the log with its own reason is a halt nobody reads.
+        # A standing halt is the agent BEHAVING CORRECTLY, so this exits 0, not 3.
+        #
+        # The comment above used to say launchd retries every ThrottleInterval,
+        # "which is what makes the search resume on its own once a human clears
+        # the halt". That was wrong in a way that cost three hours: ThrottleInterval
+        # only applies to a `KeepAlive` job, and this one is `StartInterval: 10800`,
+        # so the loop was re-invoked every three hours no matter what it exited
+        # with. A halt therefore stalled the search for three hours after it was
+        # cleared, and `launchctl list` showed the job as `3`, indistinguishable
+        # from a crash. The re-check cadence now belongs to the watchdog, which
+        # ticks every 15 minutes and starts the loop when nothing is stopping it.
         sig = f"{h.since_h}|{h.reason}"
         # The marker lives beside the halt file, NOT in the fixed STATE dir. Two
         # reasons, and the second one is why this was flaky: (1) a test that
@@ -138,7 +144,7 @@ def main() -> int:
         else:
             log(f"HALT      still held since {h.since_h}; not proposing "
                 f"({len(h.findings or [])} finding(s))")
-        return 3
+        return 0
 
     # 1. PROPOSE
     history = read_records()

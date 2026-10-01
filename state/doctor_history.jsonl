@@ -72,3 +72,5 @@
 {"when": 1790857044.736085, "when_h": "2026-10-01 20:17:24", "verdict": "wrong", "ok": false, "criticals": ["reproducible/C2"], "majors": []}
 {"when": 1790857947.2071218, "when_h": "2026-10-01 20:32:27", "verdict": "wrong", "ok": false, "criticals": ["reproducible/C2"], "majors": []}
 {"when": 1790858979.216624, "when_h": "2026-10-01 20:49:39", "verdict": "wrong", "ok": false, "criticals": ["reproducible/C2"], "majors": []}
+{"when": 1790859883.191796, "when_h": "2026-10-01 21:04:43", "verdict": "wrong", "ok": false, "criticals": [], "majors": ["reproducible/C1"]}
+{"when": 1790860123.918903, "when_h": "2026-10-01 21:08:43", "verdict": "wrong", "ok": false, "criticals": [], "majors": ["reproducible/C1"]}
