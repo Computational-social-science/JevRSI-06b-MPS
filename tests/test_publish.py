@@ -211,6 +211,36 @@ def main() -> int:
             check("the bundle's own sha256 is reported", len(sha) == 64, sha[:20])
             path.unlink(missing_ok=True)
 
+    print("\n7. the exit code distinguishes held-back from nothing-to-do")
+    # This regressed silently and for a structural reason, so it is pinned by
+    # name: `d.staged` used to be set only inside `gate_secrets`, which is SKIPPED
+    # whenever an earlier gate refuses. Every refusal therefore reported
+    # `staged = 0` and exited 0 — identical to a successful no-op. The one signal
+    # meant to tell "held back" from "nothing to do" could not fire.
+    import subprocess as _sp
+    rc_refused = _sp.run([sys.executable, str(ROOT / "pipeline" / "publish.py"),
+                          "--quiet"], cwd=ROOT, capture_output=True).returncode
+    check("a healthy run exits 0", rc_refused == 0, f"rc={rc_refused}")
+    prereg = ROOT / "records" / "prereg.jsonl"
+    keep = prereg.read_text()
+    try:
+        # A dangling preregistration: invariant I2, and it definitely stages.
+        prereg.write_text(keep + json.dumps(
+            {"arm": "dangling_for_exitcode_probe", "axis": "t", "change": "x",
+             "prediction": "y", "delta_floor": 0.006, "direction": "up"}) + "\n")
+        rc_bad = _sp.run([sys.executable, str(ROOT / "pipeline" / "publish.py"),
+                          "--quiet"], cwd=ROOT, capture_output=True).returncode
+        check("a REFUSED publish exits 2, not 0", rc_bad == 2, f"rc={rc_bad}")
+        check("... and did not commit anything",
+              "dangling_for_exitcode_probe" not in
+              _sp.run(["git", "-C", str(ROOT), "show", "HEAD:records/prereg.jsonl"],
+                      capture_output=True, text=True).stdout)
+    finally:
+        prereg.write_text(keep)
+        import halt as _h
+        _h.clear_halt("test", "exit-code probe: I2 planted and removed")
+        _sp.run(["git", "-C", str(ROOT), "reset", "-q"], capture_output=True)
+
     print(f"\n{len(FAILS)} failure(s)" if FAILS else "\nALL PASS")
     return 1 if FAILS else 0
 

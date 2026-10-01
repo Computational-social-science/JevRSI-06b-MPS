@@ -467,7 +467,3 @@ if __name__ == "__main__":
     if r.may_publish:
         raise SystemExit(0)
     raise SystemExit(3)
-
-
-
-
