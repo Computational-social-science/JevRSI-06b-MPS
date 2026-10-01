@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790864217.7564642,
-  "when_h": "2026-10-01 22:16:57",
+  "when": 1790865120.440994,
+  "when_h": "2026-10-01 22:32:00",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 351s ago"
+            "last arm-log write 1253s ago"
           ],
           "repair": ""
         }
@@ -355,11 +355,10 @@
           "severity": "info",
           "detail": "every running process postdates power.py and loop.py",
           "evidence": [
-            "dashboard.py (pid 59666, 30 min)",
-            "watchdog.py (pid 59670, 30 min)",
-            "daemon.py (pid 60540, 26 min)",
-            "run_one.py (pid 60549, 26 min)",
-            "publish.py (pid 68035, 0 min)"
+            "dashboard.py (pid 59666, 45 min)",
+            "watchdog.py (pid 59670, 45 min)",
+            "daemon.py (pid 60540, 41 min)",
+            "run_one.py (pid 60549, 41 min)"
           ],
           "repair": ""
         },
