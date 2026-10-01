@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790838294.8237062,
-  "when_h": "2026-10-01 15:04:54",
+  "when": 1790838686.552514,
+  "when_h": "2026-10-01 15:11:26",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "pgrep watchdog"
+            "this diagnosis is running inside the watchdog (pid 18663)"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 2059s ago"
+            "last arm-log write 2451s ago"
           ],
           "repair": ""
         }

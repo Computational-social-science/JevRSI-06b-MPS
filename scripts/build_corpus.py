@@ -24,6 +24,19 @@ We add two things:
 """
 from __future__ import annotations
 
+# The domestic-mirror rule, applied before anything imports huggingface_hub.
+# This script runs by hand rather than under launchd, so it cannot rely on a
+# plist's EnvironmentVariables, and `dev` is not on its path — it is a thin
+# wrapper over upstream's builder. The rule is therefore restated per entry
+# point rather than trusted to be inherited from a shell.
+#
+# `setdefault`, not assignment: an explicit HF_ENDPOINT in the environment still
+# wins, so a one-off fetch from the origin needs no file edit.
+import os as _os
+
+_os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+_os.environ.setdefault("HF_HUB_DISABLE_TELEMETRY", "1")
+
 import argparse
 import hashlib
 import json

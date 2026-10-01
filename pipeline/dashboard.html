@@ -389,7 +389,11 @@ function render(d){
     <div><h1>RSI-Jev · Qwen3-0.6B</h1>
       <div class="sub">self-improving research loop · Qwen3-0.6B-Base on Apple MPS ·
       re-read from disk on every request, nothing cached</div></div>
-    <div class="stamp"><b>${live}</b>${esc(d.now_h)}</div></div>
+    <div class="stamp"><b>${live}</b>${esc(d.now_h)}
+      ${d.sources?`<div style="margin-top:2px" title="artefacts are pulled through
+        the domestic mirror; an explicit HF_ENDPOINT in the environment still
+        wins">${esc(String(d.sources.hf_endpoint||"").replace(/^https?:\/\//,""))}</div>`:""}
+    </div></div>
   ${incons}${banner(d)}${cells}
   <div class="grid g-32">${fig}${queue}</div>
   <div class="grid g-2">${arms}${health}</div>
@@ -398,7 +402,9 @@ function render(d){
     <span>record <code>versions/current.md</code></span>
     <span>discarded <code>versions/DISCARDED.md</code></span>
     <span>trajectory <code>state/trajectory.html</code></span>
-    <span>doctor <code>state/doctor.json</code></span></div>`;
+    <span>doctor <code>state/doctor.json</code></span>
+    <span>weights &amp; corpus via <code>${esc((d.sources&&d.sources.hf_endpoint)||"hf")}</code></span>
+    </div>`;
   d.arms.forEach(a=>S.seen.add(a.arm));
   S.first=false;
 }

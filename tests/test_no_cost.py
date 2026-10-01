@@ -54,7 +54,13 @@ METERED = re.compile(
 KEY_LITERAL = re.compile(r"sk-[A-Za-z0-9_-]{16,}|hf_[A-Za-z0-9]{24,}|AKIA[0-9A-Z]{16}")
 # Any non-HuggingFace http(s) URL in runtime code.
 URL = re.compile(r"https?://([A-Za-z0-9.-]+)")
-ALLOWED_HOSTS = {"huggingface.co", "hf.co", "127.0.0.1", "localhost"}
+# The domestic mirror is the project's declared default (see `dev.hf_endpoint`),
+# so it belongs here. Leaving it out would make the cost guard fire on the very
+# download the standing rule requires — a guard that punishes compliance is
+# worse than a guard that is merely absent, because it teaches the reader to
+# disable it.
+ALLOWED_HOSTS = {"huggingface.co", "hf.co", "hf-mirror.com",
+                 "127.0.0.1", "localhost"}
 
 # A URL that something would actually FETCH, not one that appears in prose. The
 # distinction matters: the version card cites github.com in a markdown link and
@@ -117,7 +123,8 @@ def main() -> int:
           "; ".join(hits_metered[:3]))
     check("no credential literal committed anywhere", not hits_key,
           "; ".join(hits_key[:3]))
-    check("no network host other than HuggingFace/localhost", not hits_url,
+    check("no network host other than HuggingFace (incl. the domestic mirror) "
+          "and localhost", not hits_url,
           "; ".join(hits_url[:3]))
 
     cfg = ROOT / "config" / "run.json"

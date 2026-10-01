@@ -137,6 +137,15 @@ def collect() -> dict:
             doc = {"verdict": "unreadable", "ok": False,
                    "diagnosis": "doctor.json could not be parsed"}
 
+    # Where this run downloads from. A number fetched from the origin and a
+    # number fetched from the mirror are the same model, but a reader cannot
+    # verify that from the score — so the endpoint travels with the run.
+    try:
+        import dev as _dev
+        sources = _dev.describe_sources()
+    except Exception as exc:
+        sources = {"hf_endpoint": f"unknown ({type(exc).__name__})"}
+
     arms = []
     for r in arms_raw:
         p = prereg.get(r.get("arm"), {})
@@ -195,6 +204,7 @@ def collect() -> dict:
         },
         "current_arm": current,
         "doctor": doc,
+        "sources": sources,
         "progress_pct": round(progress, 1),
         "n_arms_done": len(arms),
         "n_arms_total": len(agenda.AGENDA),

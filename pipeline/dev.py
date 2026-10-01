@@ -30,9 +30,61 @@ here.
 """
 from __future__ import annotations
 
+import json
 import os
 
 import torch
+
+# --- where this project downloads from ---------------------------------------
+# A standing project rule: pull HuggingFace artefacts through the domestic
+# mirror, not through huggingface.co directly.
+#
+# This lives here rather than in each entry point because `dev` is imported by
+# every one of them — `arm`, `daemon`, `run_one`, `verify_ckpt`, the tests — so
+# this is the single place where the fact is stated and the single place it can
+# be read from. Setting it in the launchd plists as well is belt and braces, not
+# the mechanism: launchd does not inherit a shell's environment, so a rule
+# applied only in the plist would silently not apply to a hand-run arm, a test,
+# or a future entry point somebody writes. One definition, honoured everywhere.
+#
+# An explicit `HF_ENDPOINT` in the environment still wins, so a one-off run
+# against the origin remains possible without editing a file — and the record
+# says which endpoint was used, so a number fetched from one is never silently
+# pooled with a number fetched from the other.
+_MIRROR = "https://hf-mirror.com"
+
+
+def hf_endpoint() -> str:
+    """The endpoint in force, and apply the project default if none is set."""
+    cur = os.environ.get("HF_ENDPOINT", "").strip()
+    if not cur:
+        os.environ["HF_ENDPOINT"] = _MIRROR
+        cur = _MIRROR
+    # Read by huggingface_hub at import time in some versions, so it is set as
+    # early as this module is imported rather than at first use.
+    return cur
+
+
+def describe_sources() -> dict:
+    """What this run will download from. Recorded, so a reader can tell."""
+    cfg = {}
+    p = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                     "config", "run.json")
+    if os.path.isfile(p):
+        try:
+            cfg = json.load(open(p))
+        except (OSError, json.JSONDecodeError):
+            cfg = {}
+    return {
+        "hf_endpoint": hf_endpoint(),
+        "hf_endpoint_default": _MIRROR,
+        "hf_endpoint_is_default": os.environ.get("HF_ENDPOINT", "") == _MIRROR,
+        "corpus_builder": cfg.get("corpus_builder", "scripts/build_corpus.py"),
+        "model": cfg.get("model", ""),
+    }
+
+
+hf_endpoint()   # applied on import, deliberately
 
 
 def device() -> str:
