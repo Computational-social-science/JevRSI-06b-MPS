@@ -1,10 +1,10 @@
 {
   "active": true,
-  "reason": "the loop is running but the SCIENCE is not: integrity/I14. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
-  "since": 1790861207.839247,
-  "since_h": "2026-10-01 21:26:47",
+  "reason": "the loop is running but the SCIENCE is not: provenance/I2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
+  "since": 1790861406.484357,
+  "since_h": "2026-10-01 21:30:06",
   "findings": [
-    "integrity/I14"
+    "provenance/I2"
   ],
   "unreadable": false
 }

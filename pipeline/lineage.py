@@ -136,7 +136,12 @@ def read_arms() -> list[dict]:
                 out.append(json.loads(line))
             except json.JSONDecodeError:
                 pass
-    return out
+    # Fold supersessions: the last row per arm wins. A withdrawn verdict has to be
+    # withdrawn on the DISK, not only in the log that recorded it, or the lineage
+    # keeps showing a keeper the record has already retired -- and an arm that
+    # appears twice is an arm counted twice.
+    import agenda
+    return list(agenda.latest_by_arm(out).values())
 
 
 def _ckpt_bytes(arm: str) -> tuple[bool, int]:

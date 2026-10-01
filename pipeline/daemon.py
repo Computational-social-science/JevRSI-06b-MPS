@@ -364,23 +364,49 @@ def main() -> int:
 
     if res.verdict == "kept":
         delta = (res.pooled_top1_candidate or 0) - (res.pooled_top1_control or 0)
-        res.seeds_done = 1 if not confirmmod.is_confirmation(pre.arm) else 2
-        if res.seeds_done < res.seeds_required:
-            pend = confirmmod.schedule(
-                pre.arm, res.seeds_done,
-                delta=delta, floor=pre.delta_floor,
-                steps=spec["steps"], batch_size=spec["batch_size"],
-                seeds_required=res.seeds_required, champion_delta=res.champion_delta)
-            log(f"CONFIRM    {pre.arm} cleared the bar but is NOT champion yet: "
-                f"run {res.seeds_done}/{res.seeds_required} done, "
-                f"scheduled {pend['confirm_arm']} on fresh seed {pend['seed']} "
-                f"(a number it was not selected on)")
-            res.verdict = "kept_pending_confirm"
-            res.reason += (f"; awaiting fresh-seed confirmation "
-                           f"({res.seeds_done}/{res.seeds_required})")
+        # A KEEPER MUST HAVE AN ARTIFACT. Not a convention: a verdict with no
+        # weights behind it cannot be re-scored from disk, cannot be verified
+        # per question, cannot be published, and cannot be spent on the held-out
+        # set -- and this project's claim, that upstream's conclusions are general
+        # laws rather than artefacts of one backbone, is checkable only by scoring
+        # the two models on a shared evaluator. `null_floor` cleared a bar and was
+        # recorded `kept_pending_confirm` having been run with `ckpt=no`; four arms
+        # later `ckpt/` was empty and the lineage was a number with nothing behind
+        # it. The verdict is refused here rather than caught later by I14, because
+        # the run has already happened by the time an invariant sees it.
+        _ck = CKPT / pre.arm
+        _has_weights = _ck.is_dir() and any(_ck.rglob("*.pt")) or any(_ck.rglob("*.safetensors"))
+        if not _has_weights:
+            res.verdict = "rejected"
+            res.passed = False
+            res.reason = ("cleared the bar but has NO WEIGHTS on disk, so there is "
+                          "nothing to re-score, verify, publish or hold out. A "
+                          "verdict without an artifact is not a keeper. The arm is a "
+                          "measurement and the record says so.")
+            log(f"ARTIFACT  {pre.arm} cleared the bar and has no checkpoint under "
+                f"{_ck}; refusing the keeper verdict. Upstream publishes a "
+                f"checkpoint that reproduces its training run's per-question "
+                f"predictions, and a number is not that.")
+            confirmmod.clear()
         else:
-            log(f"CONFIRM    {pre.arm} confirmed on {res.seeds_required} seed(s); "
-                f"every one cleared the bar")
+            res.seeds_done = 1 if not confirmmod.is_confirmation(pre.arm) else 2
+            if res.seeds_done < res.seeds_required:
+                pend = confirmmod.schedule(
+                    pre.arm, res.seeds_done,
+                    delta=delta, floor=pre.delta_floor,
+                    steps=spec["steps"], batch_size=spec["batch_size"],
+                    seeds_required=res.seeds_required,
+                    champion_delta=res.champion_delta)
+                log(f"CONFIRM    {pre.arm} cleared the bar but is NOT champion yet: "
+                    f"run {res.seeds_done}/{res.seeds_required} done, "
+                    f"scheduled {pend['confirm_arm']} on fresh seed {pend['seed']} "
+                    f"(a number it was not selected on)")
+                res.verdict = "kept_pending_confirm"
+                res.reason += (f"; awaiting fresh-seed confirmation "
+                               f"({res.seeds_done}/{res.seeds_required})")
+            else:
+                log(f"CONFIRM    {pre.arm} confirmed on {res.seeds_required} "
+                    f"seed(s); every one cleared the bar")
 
     # Prove the corpus and the targets were disjoint, BEFORE the record is
     # written. Placed here deliberately: after the verdict is settled (so a

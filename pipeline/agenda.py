@@ -107,6 +107,38 @@ def is_null_series(arm_name: str) -> bool:
     return name.startswith("null")
 
 
+
+def latest_by_arm(rows) -> dict:
+    """The last row per arm. LAST WINS, because arms.jsonl is append-only.
+
+    This function exists because a superseding row does not remove the row it
+    supersedes, and every consumer that iterates the log therefore sees an arm
+    twice. That is not hypothetical and it was not caught by being careful:
+
+      * `pipeline/retire_weightless.py` appends a corrected verdict for
+        `null_floor`, and `agenda.null_deltas` -- which had no notion of a
+        supersession -- counted the arm twice. Five "null arms" from four, a noise
+        sd that fell from 0.0207 to 0.0179 because one arm had been duplicated, and
+        a bar that moved to +0.0931 for no reason at all. A floor measured partly
+        from a duplicate is not a floor, and D1 in DISCARDED.md is the same lesson
+        from the other direction: that time the fix was to DELETE the stale rows,
+        which conflicts with an append-only record.
+
+      * `invariants.check_all` saw the original `kept_pending_confirm` row and
+        reported I14 critical forever, after the verdict had been withdrawn.
+
+    So: appending stays (an edited record cannot be distinguished from one that
+    was never wrong), and every reader folds. One definition, here, used by all of
+    them -- because four readers each folding on their own is how the floor and the
+    invariant panel start disagreeing about what the record says.
+    """
+    out: dict = {}
+    for r in rows or ():
+        a = r.get("arm")
+        if a:
+            out[str(a)] = r
+    return out
+
 def null_deltas(records) -> list[float]:
     """The deltas of the null series, and of nothing else.
 
@@ -125,8 +157,8 @@ def null_deltas(records) -> list[float]:
     invented from a missing control is not a measurement.
     """
     out: list[float] = []
-    for r in records or ():
-        if not is_null_series(str(r.get("arm", ""))):
+    for arm, r in latest_by_arm(records).items():
+        if not is_null_series(arm):
             continue
         c, k = r.get("pooled_top1_candidate"), r.get("pooled_top1_control")
         if c is not None and k is not None:
@@ -145,8 +177,8 @@ def null_guard_deltas(records) -> list[float]:
     """
     import loop as _loop
     out: list[float] = []
-    for r in records or ():
-        if not is_null_series(str(r.get("arm", ""))):
+    for arm, r in latest_by_arm(records).items():
+        if not is_null_series(arm):
             continue
         cand = r.get("per_target_top1") or {}
         ctrl = r.get("per_target_top1_control") or {}

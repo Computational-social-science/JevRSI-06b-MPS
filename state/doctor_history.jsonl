@@ -78,3 +78,5 @@
 {"when": 1790861048.84433, "when_h": "2026-10-01 21:24:08", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
 {"when": 1790861099.383905, "when_h": "2026-10-01 21:24:59", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
 {"when": 1790861207.83902, "when_h": "2026-10-01 21:26:47", "verdict": "wrong", "ok": false, "criticals": ["integrity/I14"], "majors": []}
+{"when": 1790861393.043355, "when_h": "2026-10-01 21:29:53", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790861406.483755, "when_h": "2026-10-01 21:30:06", "verdict": "wrong", "ok": false, "criticals": [], "majors": ["provenance/I2"]}

@@ -414,6 +414,8 @@ def check_all() -> list[Finding]:
         pass
     _in_flight = running_arm()
     stale_ckpt, survivor_ckpt = [], []
+    import agenda as _ag
+    arms = list(_ag.latest_by_arm(arms).values())
     for r_ in arms:
         a_ = r_.get("arm")
         if not a_ or not (ROOT / "ckpt" / str(a_)).is_dir():
