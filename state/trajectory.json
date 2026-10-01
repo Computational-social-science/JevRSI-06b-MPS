@@ -1,0 +1,52 @@
+{
+  "generated": 1790833798.492975,
+  "backbone": "Qwen/Qwen3-0.6B-Base",
+  "n_arms": 1,
+  "n_prereg": 1,
+  "n_kept": 0,
+  "n_rejected": 0,
+  "n_needs_repair": 0,
+  "n_error": 0,
+  "champions": [],
+  "arms": [
+    {
+      "arm": "null_floor",
+      "axis": "training",
+      "change": "NOTHING: the champion spec, run again. A null arm, to measure the noise floor the bar is set against.",
+      "prediction": "This arm is a REPLICA of the champion recipe, not a do-nothing: it trains, so its delta against its own control is the champion's effect (measured at +0.0665 on the first run), NOT zero. What the series buys is the SPREAD of that delta across seeds, and the spread is the noise floor \u2014 the smallest difference this setup can honestly call a result. A single replica cannot estimate a spread, which is why null1..null3 follow it.",
+      "expected_effect": 0.0,
+      "underpowered": true,
+      "delta_floor": 0.006,
+      "null_floor_vs": "null2 @ top1=0.5310",
+      "top1_candidate": 0.531,
+      "top1_control": 0.4645,
+      "delta": 0.0665,
+      "min_decision_score": -9.740259740259749,
+      "ece": 0.050272067387898765,
+      "n_questions": 2000,
+      "targets": [
+        "in_distribution",
+        "mmlu_pro_guard",
+        "typed_decisions"
+      ],
+      "per_target": {
+        "in_distribution": 0.7455065359477124,
+        "typed_decisions": 0.531,
+        "mmlu_pro_guard": 0.19
+      },
+      "per_target_control": {
+        "in_distribution": 0.5674019607843137,
+        "typed_decisions": 0.4645,
+        "mmlu_pro_guard": 0.215
+      },
+      "verdict": "kept_pending_confirm",
+      "passed": true,
+      "guards_failed": [],
+      "reason": "cleared the bar; awaiting a fresh-seed confirmation",
+      "error": "",
+      "train_seconds": 3316,
+      "final_loss": 0.6331608295440674,
+      "ts": 1790827812.1783419
+    }
+  ]
+}

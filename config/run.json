@@ -1,0 +1,30 @@
+{
+  "model": "Qwen/Qwen3-0.6B-Base",
+  "device": "auto",
+  "steps": 300,
+  "confirmation_steps": 1500,
+  "batch_size": 16,
+  "max_options": 80,
+  "seed": 17,
+  "targets": {
+    "primary": "typed_decisions",
+    "guard": "mmlu_pro_guard",
+    "guard_n": 200
+  },
+  "save_ckpt_for": [
+    "champion_base",
+    "train_lower_layers_soft"
+  ],
+  "loop": {
+    "interval_s": 7200,
+    "heartbeat_s": 1800,
+    "arm_timeout_s": 86400
+  },
+  "min_artifact_agreement": 1.0,
+  "seeds_per_role": {
+    "calibration": 1,
+    "decisive": 3,
+    "exploratory": 1,
+    "_why": "a decisive arm is the only one where a null is informative, so it is the only one worth spending seeds on. 3 seeds takes the minimum detectable effect from ~0.019 to ~0.016, which is the difference between train_lower_layers_soft (+0.020) being resolvable and not. An exploratory arm cannot be resolved by more seeds -- its expected effect is below the noise at any budget this machine can afford -- so extra seeds there buy nothing but cost an arm each."
+  }
+}

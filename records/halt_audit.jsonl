@@ -1,0 +1,6 @@
+{"ts": 1790835995.035926, "when_h": "2026-10-01 14:26:35", "action": "halted", "why": "the loop is running but the SCIENCE is not: methodology/I5. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.", "findings": ["methodology/I5"]}
+{"ts": 1790836729.907198, "when_h": "2026-10-01 14:38:49", "action": "halted", "why": "planted for the test", "findings": ["provenance/I3"]}
+{"ts": 1790836749.753437, "when_h": "2026-10-01 14:39:09", "action": "halted", "why": "planted for the test", "findings": ["provenance/I3"]}
+{"ts": 1790836754.521966, "when_h": "2026-10-01 14:39:14", "action": "halted", "why": "planted for the test", "findings": ["provenance/I3"]}
+{"ts": 1790836769.320683, "when_h": "2026-10-01 14:39:29", "action": "halted", "why": "planted for the test", "findings": ["provenance/I3"]}
+{"ts": 1790836918.948237, "when_h": "2026-10-01 14:41:58", "action": "cleared", "why": "I5's critical was self-inflicted: power.json was overwritten with analyse([]) at 14:20 during a probe refactor, so arms had been judged with no floor behind the bar. Regenerated with power.py --from-arms (n_null_arms=1, paired_sd 0.011, bar 0.0200) and 12/12 invariants now hold. No arm was judged on the broken state.", "findings": ["by hermes (with Dr. Hu's authorisation)"]}

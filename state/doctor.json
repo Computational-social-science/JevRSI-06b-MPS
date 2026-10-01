@@ -1,0 +1,332 @@
+{
+  "verdict": "healthy",
+  "ok": true,
+  "when": 1790836922.124583,
+  "when_h": "2026-10-01 14:42:02",
+  "auditors": {
+    "vitals": {
+      "n": 7,
+      "ok": 7,
+      "critical": [],
+      "major": [],
+      "findings": [
+        {
+          "invariant": "V1",
+          "title": "the loop is installed in launchd",
+          "ok": true,
+          "severity": "major",
+          "detail": "nobody will start it again",
+          "evidence": [
+            "launchctl list"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "V2",
+          "title": "an arm is running or the loop is between arms",
+          "ok": true,
+          "severity": "info",
+          "detail": "",
+          "evidence": [
+            "arm running: True"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "V3",
+          "title": "the watchdog is alive",
+          "ok": true,
+          "severity": "major",
+          "detail": "nothing re-asserts sleep prevention or restarts the loop",
+          "evidence": [
+            "pgrep watchdog"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "V4",
+          "title": "sleep is prevented",
+          "ok": true,
+          "severity": "major",
+          "detail": "an arm that dies at hour three is an arm nobody can explain",
+          "evidence": [
+            "pmset -g assertions"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "V5",
+          "title": "disk has room for a checkpoint",
+          "ok": true,
+          "severity": "major",
+          "detail": "a full disk kills an arm mid-write and takes the checkpoint",
+          "evidence": [
+            "3702 GB free"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "V6",
+          "title": "the dashboard is serving",
+          "ok": true,
+          "severity": "minor",
+          "detail": "a monitor that is down cannot tell you the loop is down",
+          "evidence": [
+            "process: True"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "V7",
+          "title": "the in-flight arm is advancing, not wedged",
+          "ok": true,
+          "severity": "major",
+          "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
+          "evidence": [
+            "last arm-log write 687s ago"
+          ],
+          "repair": ""
+        }
+      ]
+    },
+    "provenance": {
+      "n": 4,
+      "ok": 4,
+      "critical": [],
+      "major": [],
+      "findings": [
+        {
+          "invariant": "I1",
+          "title": "every result has a prediction registered before it",
+          "ok": true,
+          "severity": "critical",
+          "detail": "1 result(s), all preregistered",
+          "evidence": [
+            "1 results, 3 preregs"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I2",
+          "title": "no prediction left unresolved",
+          "ok": true,
+          "severity": "major",
+          "detail": "none dangling",
+          "evidence": [
+            "in flight: confirm__null_floor"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I3",
+          "title": "the champion has a record",
+          "ok": true,
+          "severity": "critical",
+          "detail": "traceable",
+          "evidence": [
+            "no champion yet (fine before the first keeper)"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I4",
+          "title": "the bar never moves down",
+          "ok": true,
+          "severity": "critical",
+          "detail": "no promotions yet",
+          "evidence": [],
+          "repair": ""
+        }
+      ]
+    },
+    "methodology": {
+      "n": 4,
+      "ok": 4,
+      "critical": [],
+      "major": [],
+      "findings": [
+        {
+          "invariant": "I5",
+          "title": "the noise floor is measured, or its absence declared",
+          "ok": true,
+          "severity": "minor",
+          "detail": "declared",
+          "evidence": [
+            "1 null arm(s): the floor is still the 0.011 FALLBACK",
+            "declared as a fallback in the record rather than passed off as measured"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I6",
+          "title": "the queue is obeyed",
+          "ok": true,
+          "severity": "major",
+          "detail": "in order",
+          "evidence": [
+            "queue head: null1",
+            "in flight : confirm__null_floor",
+            "pending confirmation takes precedence"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I7",
+          "title": "a kept arm ran every seed it was owed",
+          "ok": true,
+          "severity": "critical",
+          "detail": "no keeper is short a seed",
+          "evidence": [
+            "all complete"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I8",
+          "title": "the held-out set is read at most once",
+          "ok": true,
+          "severity": "info",
+          "detail": "consumable by construction; a second read raises",
+          "evidence": [
+            "spent=False, read at never"
+          ],
+          "repair": ""
+        }
+      ]
+    },
+    "integrity": {
+      "n": 4,
+      "ok": 4,
+      "critical": [],
+      "major": [],
+      "findings": [
+        {
+          "invariant": "I9",
+          "title": "every scored arm passed the contamination check",
+          "ok": true,
+          "severity": "critical",
+          "detail": "verified per arm",
+          "evidence": [
+            "1 arm(s) all checked"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I10",
+          "title": "a published artifact reproduced its training run",
+          "ok": true,
+          "severity": "critical",
+          "detail": "verified",
+          "evidence": [
+            "none pending"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I11",
+          "title": "one kernel stack throughout",
+          "ok": true,
+          "severity": "critical",
+          "detail": "single stack",
+          "evidence": [
+            "none recorded yet"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "I12",
+          "title": "the search costs nothing",
+          "ok": true,
+          "severity": "critical",
+          "detail": "local MPS, open weights, anonymous hub",
+          "evidence": [
+            "no credential or metered endpoint in our code"
+          ],
+          "repair": ""
+        }
+      ]
+    },
+    "adversary": {
+      "n": 5,
+      "ok": 5,
+      "critical": [],
+      "major": [],
+      "findings": [
+        {
+          "invariant": "A1",
+          "title": "every headline number recomputes from its raw rows",
+          "ok": true,
+          "severity": "info",
+          "detail": "1 most recent arm(s) recomputed from raw per-question rows",
+          "evidence": [
+            "18592 raw rows, 6 per-target numbers recomputed"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "A2",
+          "title": "every delta follows from its own candidate and control",
+          "ok": true,
+          "severity": "info",
+          "detail": "null_floor: delta not recorded, pooled pair is self-consistent",
+          "evidence": [
+            "no champion_delta recorded; pooled candidate - control = +0.066500"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "A3",
+          "title": "every arm was measured against the same control",
+          "ok": true,
+          "severity": "info",
+          "detail": "the control is shared by every arm",
+          "evidence": [
+            "1 distinct control value(s) across 1 arm(s)",
+            "control 0.464500: null_floor"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "A4",
+          "title": "the bar follows from the rule that produces it",
+          "ok": true,
+          "severity": "info",
+          "detail": "the bar follows from the rule",
+          "evidence": [
+            "null deltas fed back in: [0.0665]",
+            "at planned_seeds=2, fallback_sd=0.011",
+            "re-derived recommended_bar 0.020000",
+            "recorded  recommended_bar 0.020000",
+            "champion delta (none)"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "A5",
+          "title": "a measured noise floor is the null arms' own spread",
+          "ok": true,
+          "severity": "info",
+          "detail": "the floor is still the declared fallback (known limitation, not a violation)",
+          "evidence": [
+            "1 null arm(s); a spread needs >= 2"
+          ],
+          "repair": ""
+        }
+      ]
+    }
+  },
+  "criticals": [],
+  "majors": [],
+  "minors": [],
+  "diagnosis": "all auditors agree: the loop is running and the science it is running is the science we said we would run",
+  "halt": {
+    "active": false,
+    "reason": "",
+    "since": 0.0,
+    "since_h": "",
+    "findings": [],
+    "unreadable": false
+  },
+  "repairs": [],
+  "needs_human": false
+}

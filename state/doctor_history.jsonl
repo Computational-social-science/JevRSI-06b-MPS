@@ -1,0 +1,25 @@
+{"when": 1790830462.448349, "when_h": "2026-10-01 12:54:22", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790830549.755185, "when_h": "2026-10-01 12:55:49", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790830581.8304489, "when_h": "2026-10-01 12:56:21", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790830612.29953, "when_h": "2026-10-01 12:56:52", "verdict": "degraded", "ok": false, "criticals": [], "majors": ["vitals/V3"]}
+{"when": 1790830626.513767, "when_h": "2026-10-01 12:57:06", "verdict": "degraded", "ok": false, "criticals": [], "majors": ["vitals/V3"]}
+{"when": 1790830640.916621, "when_h": "2026-10-01 12:57:20", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790830765.395125, "when_h": "2026-10-01 12:59:25", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790830817.1081128, "when_h": "2026-10-01 13:00:17", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790831526.647549, "when_h": "2026-10-01 13:12:06", "verdict": "degraded", "ok": false, "criticals": [], "majors": ["vitals/V3"]}
+{"when": 1790831657.35106, "when_h": "2026-10-01 13:14:17", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790831808.675222, "when_h": "2026-10-01 13:16:48", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790832426.771594, "when_h": "2026-10-01 13:27:06", "verdict": "degraded", "ok": false, "criticals": [], "majors": ["vitals/V3"]}
+{"when": 1790832517.598072, "when_h": "2026-10-01 13:28:37", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790832874.3589098, "when_h": "2026-10-01 13:34:34", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790833326.906461, "when_h": "2026-10-01 13:42:06", "verdict": "degraded", "ok": false, "criticals": [], "majors": ["vitals/V3"]}
+{"when": 1790834227.041333, "when_h": "2026-10-01 13:57:07", "verdict": "wrong", "ok": false, "criticals": ["integrity/I9"], "majors": ["vitals/V3", "methodology/I6"]}
+{"when": 1790834832.552618, "when_h": "2026-10-01 14:07:12", "verdict": "wrong", "ok": false, "criticals": ["integrity/I9"], "majors": ["methodology/I6"]}
+{"when": 1790834867.615322, "when_h": "2026-10-01 14:07:47", "verdict": "wrong", "ok": false, "criticals": ["integrity/I9"], "majors": ["methodology/I6"]}
+{"when": 1790835118.667386, "when_h": "2026-10-01 14:11:58", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790835240.34495, "when_h": "2026-10-01 14:14:00", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790835733.0405629, "when_h": "2026-10-01 14:22:13", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790835889.481189, "when_h": "2026-10-01 14:24:49", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790836462.672461, "when_h": "2026-10-01 14:34:22", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790836769.801686, "when_h": "2026-10-01 14:39:29", "verdict": "wrong", "ok": false, "criticals": ["integrity/I12"], "majors": []}
+{"when": 1790836922.124583, "when_h": "2026-10-01 14:42:02", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}

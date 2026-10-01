@@ -1,0 +1,63 @@
+{
+  "device": "mps",
+  "torch": "2.14.0",
+  "eval": {
+    "cases": 400,
+    "questions": 2000,
+    "seconds": 205.3,
+    "q_per_s": 9.7,
+    "batch": 32,
+    "note": "paid twice per arm: once for the control, once for the candidate"
+  },
+  "train": {
+    "seconds_per_step": 11.79,
+    "batch": 16,
+    "measured_steps": 6,
+    "note": "tower training, gradient checkpointing on, fp32 on MPS"
+  },
+  "arm_cost": {
+    "50": {
+      "steps": 50,
+      "eval_s": 411,
+      "train_s": 590,
+      "total_s": 1000,
+      "total_h": 0.28
+    },
+    "100": {
+      "steps": 100,
+      "eval_s": 411,
+      "train_s": 1179,
+      "total_s": 1590,
+      "total_h": 0.44
+    },
+    "150": {
+      "steps": 150,
+      "eval_s": 411,
+      "train_s": 1769,
+      "total_s": 2180,
+      "total_h": 0.61
+    },
+    "300": {
+      "steps": 300,
+      "eval_s": 411,
+      "train_s": 3538,
+      "total_s": 3949,
+      "total_h": 1.1
+    },
+    "600": {
+      "steps": 600,
+      "eval_s": 411,
+      "train_s": 7076,
+      "total_s": 7486,
+      "total_h": 2.08
+    },
+    "1500": {
+      "steps": 1500,
+      "eval_s": 411,
+      "train_s": 17689,
+      "total_s": 18100,
+      "total_h": 5.03
+    }
+  },
+  "measured_at": 1790785774.723964
+}

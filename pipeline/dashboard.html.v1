@@ -1,0 +1,277 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RSI-Jev · Qwen3-0.6B</title>
+<style>
+  :root{
+    --bg:var(--card,#fff); --fg:var(--foreground,#111); --mut:var(--muted-foreground,#666);
+    --bd:var(--border,#e2e2e2); --ac:var(--accent,#3b6ea5);
+    --keep:#2f9e5e; --pend:#4a9e7a; --notconf:#8a6a2e; --neg:#b4442e; --rep:#c98a1b; --dead:#8a8a8a;
+    --mono:ui-monospace,SFMono-Regular,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  body{font:13px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif;margin:0;padding:16px;
+       background:var(--bg);color:var(--fg)}
+  h1{font-size:16px;margin:0 0 1px}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);
+     margin:0 0 8px;font-weight:600}
+  .sub{color:var(--mut);font-size:12px;margin:0 0 14px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+  .col{flex:1 1 340px;min-width:320px}
+  .card{border:1px solid var(--bd);border-radius:8px;padding:10px 12px;margin-bottom:10px;background:var(--bg)}
+  .kpis{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+  .kpi{border:1px solid var(--bd);border-radius:7px;padding:7px 12px;min-width:96px}
+  .kpi b{display:block;font-size:19px;font-variant-numeric:tabular-nums;line-height:1.2}
+  .kpi span{color:var(--mut);font-size:10px;text-transform:uppercase;letter-spacing:.04em}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  .ok{background:var(--keep)} .bad{background:var(--neg)} .idle{background:var(--dead)} .busy{background:var(--rep)}
+  table{border-collapse:collapse;width:100%;font-size:12px}
+  th,td{text-align:left;padding:5px 7px;border-bottom:1px solid var(--bd);vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:10px;text-transform:uppercase;white-space:nowrap}
+  td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .v{color:#fff;border-radius:4px;padding:1px 6px;font-size:10px;white-space:nowrap;display:inline-block}
+  .mut{color:var(--mut)}
+  .log{font:11px/1.45 var(--mono);background:color-mix(in srgb,var(--fg) 4%,transparent);
+       border:1px solid var(--bd);border-radius:6px;padding:8px;max-height:190px;overflow:auto;white-space:pre-wrap}
+  .bar{height:5px;background:var(--bd);border-radius:3px;overflow:hidden;margin:5px 0 2px}
+  .bar>i{display:block;height:100%;background:var(--ac);transition:width .4s}
+  svg{display:block;width:100%}
+  .flash{animation:fl 1.6s ease-out}
+  @keyframes fl{0%{background:color-mix(in srgb,var(--ac) 30%,transparent)}100%{background:transparent}}
+  .new{outline:1px solid var(--ac)}
+  .foot{color:var(--mut);font-size:10px;margin-top:8px}
+  code{font:11px var(--mono)}
+</style>
+
+<div id="app"><p class="mut">connecting…</p></div>
+
+<script>
+const S = {data:null, seen:new Set(), first:true};
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+const f4 = v => (typeof v==="number" && isFinite(v)) ? v.toFixed(4) : "—";
+const num = (v,d=0) => (typeof v==="number" && isFinite(v)) ? v.toFixed(d) : "—";
+const sgn = v => (typeof v==="number" && isFinite(v)) ? (v>=0?"+":"")+v.toFixed(4) : "—";
+const ago = s => { if(s==null) return "—";
+  if(s<90) return Math.round(s)+"s ago";
+  if(s<5400) return Math.round(s/60)+"m ago";
+  if(s<172800) return Math.round(s/3600)+"h ago";
+  return Math.round(s/86400)+"d ago"; };
+const DUR = s => { if(!s) return "—";
+  if(s<90) return Math.round(s)+"s";
+  if(s<5400) return Math.round(s/60)+"m";
+  return (s/3600).toFixed(1)+"h"; };
+
+const VC = {
+  kept:["kept (fresh-seed confirmed)", "--keep"],
+  kept_pending_confirm:["over bar, unconfirmed", "--pend"],
+  not_confirmed:["failed fresh seed", "--notconf"],
+  rejected:["published negative", "--neg"],
+  needs_repair:["needs repair", "--rep"],
+  error:["error", "--dead"],
+};
+
+function chart(d){
+  const arms=d.arms.filter(a=>a.delta!=null);
+  if(!arms.length) return '<p class="mut">no arm has completed yet — the chart appears on the first result</p>';
+  const W=680,H=210,P={l:46,r:12,t:10,b:54};
+  const vals=arms.flatMap(a=>[a.delta,a.expected_effect]).filter(v=>typeof v==="number");
+  let lo=Math.min(...vals,0), hi=Math.max(...vals,0); const sp=Math.max(hi-lo,0.02);
+  lo-=sp*0.18; hi+=sp*0.18;
+  const X=i=>P.l+(arms.length<2?0:i*(W-P.l-P.r)/(arms.length-1));
+  const Y=v=>H-P.b-((v-lo)/(hi-lo))*(H-P.t-P.b);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="arm deltas versus the champion line">`;
+  for(let k=0;k<4;k++){const v=lo+(hi-lo)*k/3,y=Y(v);
+    s+=`<line x1="${P.l}" y1="${y.toFixed(1)}" x2="${W-P.r}" y2="${y.toFixed(1)}" stroke="var(--bd)"/>`+
+       `<text x="${P.l-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="var(--mut)">${v.toFixed(3)}</text>`;}
+  // the bar
+  if(d.power) s+=`<line x1="${P.l}" y1="${Y(d.power.bar).toFixed(1)}" x2="${W-P.r}" y2="${Y(d.power.bar).toFixed(1)}"
+       stroke="var(--neg)" stroke-dasharray="3 3"/><text x="${W-P.r}" y="${(Y(d.power.bar)-3).toFixed(1)}"
+       text-anchor="end" font-size="9" fill="var(--neg)">bar +${d.power.bar.toFixed(4)}</text>`;
+  // champion line: best-so-far delta
+  let best=null, px=[],py=[];
+  arms.forEach((a,i)=>{ if(best==null||a.delta>best) best=a.delta; px.push(X(i)); py.push(Y(best)); });
+  s+=`<polyline points="${px.map((x,i)=>x+","+py[i]).join(" ")}" fill="none" stroke="var(--keep)" stroke-width="2"/>`;
+  arms.forEach((a,i)=>{
+    const [lab,col]=VC[a.verdict]||[a.verdict||"?","--dead"];
+    const r=a.verdict==="kept"?6:4.5;
+    s+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(a.delta).toFixed(1)}" r="${r}" fill="var(${col})" stroke="var(--bg)" stroke-width="1.3"><title>${esc(a.arm)} — ${sgn(a.delta)} (${esc(lab)})</title></circle>`;
+    s+=`<text x="${X(i).toFixed(1)}" y="${H-P.b+13}" text-anchor="end" font-size="8.5" fill="var(--mut)"
+        transform="rotate(-42 ${X(i).toFixed(1)} ${H-P.b+13})">${esc(a.arm)}</text>`;
+    if(typeof a.expected_effect==="number"&&a.expected_effect)
+      s+=`<rect x="${(X(i)-2).toFixed(1)}" y="${Y(a.expected_effect).toFixed(1)}" width="4" height="4" fill="none" stroke="var(--mut)" stroke-width="1"><title>expected ${sgn(a.expected_effect)}</title></rect>`;
+  });
+  return s+"</svg>";
+}
+
+// The multi-agent diagnosis, drawn above everything else. It is first because
+// "wrong" outranks "down": a dead process announces itself and a live one
+// publishing numbers that violate the protocol does not.
+const DOC_STYLE = {
+  healthy:  ["healthy", "var(--keep)"],
+  degraded: ["degraded", "var(--rep)"],
+  broken:   ["BROKEN", "var(--neg)"],
+  wrong:    ["WRONG — running the wrong science", "#fff"],
+  unreadable: ["doctor unreadable", "var(--neg)"],
+};
+
+function doctorPanel(d){
+  const doc = d.doctor;
+  if(!doc) return `<div class="card" style="border-color:var(--neg)">
+    <h2>Diagnosis</h2><div class="mut">the multi-agent doctor has never run — the
+    pipeline is NOT being checked for scientific correctness</div></div>`;
+  const [lab,col] = DOC_STYLE[doc.verdict] || [doc.verdict, "var(--mut)"];
+  const style = doc.verdict==="wrong"
+    ? "background:var(--neg);color:#fff;border-color:var(--neg)"
+    : (doc.ok ? "border-color:var(--keep)" : `border-color:${col}`);
+  const aud = Object.entries(doc.auditors||{}).map(([n,a])=>{
+    const bad = (a.critical&&a.critical.length)||(a.major&&a.major.length);
+    return `<tr><td>${esc(n)}</td>
+      <td class="num">${a.ok}/${a.n}</td>
+      <td class="mut">${bad?esc([...(a.critical||[]),...(a.major||[])].join("; ")):"all clear"}</td></tr>`;
+  }).join("");
+  return `<div class="card" style="${style}">
+    <h2>Diagnosis — multi-agent</h2>
+    <div style="font-size:14px;font-weight:600">${esc(lab)}
+      <span class="mut" style="font-weight:400;font-size:11px"> ${esc(doc.when_h||"")}</span></div>
+    <div style="margin:4px 0 8px">${esc(doc.diagnosis||"")}</div>
+    <table><thead><tr><th>auditor</th><th>checks</th><th>failures</th></tr></thead>
+      <tbody>${aud}</tbody></table>
+    <div class="mut" style="font-size:10px;margin-top:6px">
+      four independent lenses — vitals, provenance, methodology, integrity — and a
+      critical is never diluted by the others agreeing. "wrong" outranks "broken":
+      a dead process announces itself, a wrong one does not.</div>
+  </div>`;
+}
+
+function render(d){
+  const h=d.health, pw=d.power, v=d.verdicts, cur=d.current_arm;
+  const hc = (ok,busy)=>`<span class="dot ${ok?(busy?"busy":"ok"):"bad"}"></span>`;
+  let live = h.arm_running ? hc(true,true)+"arm running" : (h.loop_installed?hc(true)+"idle":hc(false)+"loop NOT loaded");
+  let flashNew = "";
+
+  // --- research output dynamics: what the record says RIGHT NOW
+  const recBits = [];
+  if(pw) recBits.push(pw.measured
+    ? `power: <b>${pw.n_null_arms} null arms</b>, measured sd <b>${pw.paired_sd.toFixed(4)}</b>, bar <b>+${pw.bar.toFixed(4)}</b>`
+    : `power: <b>not yet measured</b> — falling back to sd 0.011, bar <b>+${pw.bar.toFixed(4)}</b>`);
+  if(d.inconsistent) recBits.push(`<span style="color:var(--neg)"><b>INCONSISTENT STATE</b> — ${esc(d.inconsistent)}</span>`);
+  if(d.champion && !d.inconsistent) recBits.push(`champion: <b>${esc(d.champion.arm)}</b> @ top-1 <b>${f4(d.champion.pooled_top1)}</b>`);
+  else if(!d.inconsistent) recBits.push("champion: <b>none yet</b> — no arm has cleared a fresh-seed confirmation");
+  if(d.pending_confirm) recBits.push(`owed: a fresh-seed confirmation of <b>${esc(d.pending_confirm.arm)}</b> (seed ${d.pending_confirm.seed})`);
+  recBits.push(`held-out: <b>${d.held_out.spent?"read &amp; spent":"frozen, never read"}</b> (${esc(d.held_out.source)}@${esc(String(d.held_out.revision).slice(0,8))})`);
+
+  const body = `
+  <h1>RSI-Jev · Qwen3-0.6B</h1>
+  <p class="sub">24/7 self-improving loop · live from disk, no cache · ${esc(d.now_h)} · ${live}</p>
+
+  ${doctorPanel(d)}
+  <div class="kpis">
+    <div class="kpi"><b>${d.n_arms_done}/${d.n_arms_total}</b><span>arms</span></div>
+    <div class="kpi"><b>${d.progress_pct}%</b><span>complete</span></div>
+    <div class="kpi"><b style="color:var(--keep)">${v.kept||0}</b><span>confirmed</span></div>
+    <div class="kpi"><b style="color:var(--pend)">${v.kept_pending_confirm||0}</b><span>unconfirmed</span></div>
+    <div class="kpi"><b style="color:var(--neg)">${v.rejected||0}</b><span>negatives</span></div>
+    <div class="kpi"><b style="color:var(--rep)">${v.needs_repair||0}</b><span>repair</span></div>
+    <div class="kpi"><b style="color:var(--dead)">${v.error||0}</b><span>errors</span></div>
+    <div class="kpi"><b>${d.n_prereg}</b><span>preregistered</span></div>
+  </div>
+
+  <div class="card">
+    <h2>Research output — current state</h2>
+    <div style="font-size:12px">${recBits.join("<br>")}</div>
+    <div class="bar"><i style="width:${d.progress_pct}%"></i></div>
+    <div class="mut" style="font-size:10px">every number above is re-read from
+    <code>records/arms.jsonl</code>, <code>state/power.json</code>,
+    <code>state/champion.json</code> and <code>state/held_out.json</code> on each poll</div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <h2>Trajectory — every arm against the champion line</h2>
+        ${chart(d)}
+        <div class="mut" style="font-size:10px">green line = best delta so far (the bar each arm must beat) ·
+        red dashes = the bar · hollow squares = the effect upstream measured for that change</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>Health</h2>
+        <table><tbody>
+        ${[["loop in launchd",h.loop_installed],["arm running",h.arm_running],
+           ["watchdog",h.watchdog],["caffeinate",h.caffeinate],["sleep prevented",h.sleep_prevented]]
+          .map(([k,ok])=>`<tr><td>${hc(!!ok)}${esc(k)}</td><td class="num mut">${ok?"yes":"NO"}</td></tr>`).join("")}
+        <tr><td>${cur?hc(true,true)+"in flight":"last arm log"}</td><td class="num mut">${ago(cur?cur.idle_s:h.records_age_s)}</td></tr>
+        <tr><td>daemon log</td><td class="num mut">${ago(h.daemon_log_age_s)}</td></tr>
+        </tbody></table>
+        ${cur?`<div class="mut" style="font-size:11px;margin-top:6px">running <code>${esc(cur.arm)}</code> (${esc(cur.axis)})</div>`:""}
+        <div class="mut" style="font-size:10px;margin-top:6px">a silent arm is not a dead arm — the control pass
+        is legitimately quiet for tens of minutes. The watchdog judges by deadline, not by silence.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col">
+      <div class="card">
+        <h2>Queue — ordered by what this design can resolve</h2>
+        <table><thead><tr><th>arm</th><th>role</th><th>exp</th></tr></thead><tbody>
+        ${d.agenda.slice(0,10).map(a=>{
+          const rc = a.role==="calibration" ? "--mut" : a.role==="decisive" ? "--keep" : "--rep";
+          return `<tr style="${a.done?"opacity:.5":""}">
+            <td><code>${esc(a.name)}</code>${a.done?'<br><span class="mut" style="font-size:9px">done</span>':""}</td>
+            <td><span class="v" style="background:var(${rc})">${esc(a.role)}</span></td>
+            <td class="num mut">${sgn(a.expected_effect)}</td></tr>`;
+        }).join("")}
+        </tbody></table>
+        <div class="mut" style="font-size:10px;margin-top:4px">role is decided from the
+        expected effect against the detectable minimum <b>before</b> the arm runs —
+        never from what it produced.</div>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>Arms</h2>
+        <table><thead><tr><th>arm</th><th>Δ</th><th>exp</th><th>verdict</th></tr></thead><tbody>
+        ${d.arms.slice().reverse().map(a=>{
+          const [lab,col]=VC[a.verdict]||[a.verdict||"?","--dead"];
+          const isNew=!S.seen.has(a.arm);
+          return `<tr class="${isNew&&!S.first?"flash":""}">
+            <td><code>${esc(a.arm)}</code><br><span class="mut" style="font-size:10px">${esc(a.axis||"")}</span></td>
+            <td class="num">${sgn(a.delta)}</td>
+            <td class="num mut">${sgn(a.expected_effect)}</td>
+            <td><span class="v" style="background:var(${col})">${esc(lab)}</span>${a.underpowered?'<br><span class="mut" style="font-size:9px">underpowered</span>':""}</td></tr>`;
+        }).join("") || '<tr><td colspan="4" class="mut">no arm has completed yet</td></tr>'}
+        </tbody></table>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h2>Loop log</h2>
+        <div class="log">${esc((d.daemon_tail||[]).slice(-12).join("\n"))}</div>
+        ${d.arm_tail&&d.arm_tail.length?`<h2 style="margin-top:10px">arm log</h2>
+        <div class="log">${esc(d.arm_tail.slice(-6).join("\n"))}</div>`:""}
+        <div class="foot">record: <code>versions/current.md</code> · discarded: <code>versions/DISCARDED.md</code>
+        · chart: <code>state/trajectory.html</code></div>
+      </div>
+    </div>
+  </div>`;
+
+  d.arms.forEach(a=>S.seen.add(a.arm));
+  S.first=false;
+  $("#app").innerHTML = body;
+}
+
+async function tick(){
+  try{
+    const r = await fetch("api/status?"+Date.now(), {cache:"no-store"});
+    S.data = await r.json(); render(S.data);
+  }catch(e){
+    if(!S.data) $("#app").innerHTML =
+      '<p class="mut">Not connected to the dashboard server. Start it with<br>'
+      +'<code>python pipeline/dashboard.py</code><br>then open '
+      +'<code>http://127.0.0.1:8788</code></p>';
+  }
+}
+tick(); setInterval(tick, 10000);
+</script>

@@ -1,0 +1,76 @@
+# What is evidence, and what is a byproduct.
+#
+# The rule: git carries the CLAIMS, releases carry the EVIDENCE.
+#
+#   records/arms.jsonl, records/prereg.jsonl   the claims — every number and
+#                                               every prediction. Small, and the
+#                                               only thing a reader needs to
+#                                               check the argument.
+#   versions/current.md, versions/DISCARDED.md the record and the negatives.
+#                                               Published negatives are the
+#                                               point of the project.
+#   state/doctor.json, state/doctor_history.jsonl
+#   records/halt_audit.jsonl                   the diagnosis and every halt.
+#   state/trajectory.html, state/dashboard_*.html
+#                                               the figures, self-contained.
+#
+# What is deliberately NOT here, and why — each of these was considered:
+#
+#   records/*/**.items.jsonl   5.4 MB per arm, ~100 MB by the end. This is the
+#                              per-question data the adversarial probe A1
+#                              recomputes every headline from, so excluding it
+#                              makes every number in the repository
+#                              unverifiable. It is still excluded: git history
+#                              is immutable, so 100 MB is paid by every clone
+#                              forever and the repository becomes unusable.
+#                              These ship as per-arm GitHub Release assets
+#                              instead — immutable, versioned, downloadable at a
+#                              stable URL, and carrying a sha256 so the reader
+#                              can confirm they got the rows A1 used. See
+#                              pipeline/publish.py, which cuts and uploads them.
+#
+#   corpus/                    17 MB, and fully regenerable: `python
+#                              scripts/build_corpus.py --out corpus` prints the
+#                              per-file sha256, so the reader can rebuild it and
+#                              verify it. Shipping a regenerable artifact is
+#                              strictly worse than shipping the command.
+#
+#   ckpt/                      model weights. Never in git at any project.
+#
+#   .venv/                     927 MB of dependencies, pinned in config/.
+#
+#   *.log, logs/               the live tail. The durable record is arms.jsonl
+#                              and the version card; a log is a debugging
+#                              artifact, and committing one on every arm would
+#                              bury every real change in noise.
+
+.venv/
+ckpt/
+corpus/
+
+# Per-question rows: shipped as release assets, see above.
+records/*/*.items.jsonl
+
+# Live logs. The daemon writes here continuously and a commit taken mid-write
+# captures a torn line, which is noise at best and a corrupt record at worst.
+logs/
+*.log
+
+# Transient. The publisher regenerates the snapshot before committing, and
+# doctor.json is rewritten every watchdog tick, so committing the pair produces
+# a commit every 15 minutes that says nothing.
+state/dashboard_snapshot.html
+state/dashboard_demo.html
+state/doctor.json.tmp
+state/halt_logged
+records/*.bak
+
+# Nothing machine-specific may be committed. A path like /Users/<someone>/...
+# makes a repository unrunnable on every other machine, and the handoff note on
+# the upstream project records exactly that failure being hit and then fixed.
+# pipeline/paths.py is the one place a machine path is allowed to appear.
+*.abs.json
+paths.local.json
+.DS_Store
+__pycache__/
+*.pyc

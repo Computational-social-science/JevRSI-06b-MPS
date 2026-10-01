@@ -1,0 +1,9 @@
+{
+  "frozen_at": 1790827433.327178,
+  "frozen_at_h": "2026-10-01 12:03:53",
+  "source": "tasksource/tasksource",
+  "revision": "7bfbd76c",
+  "n_cases": 400,
+  "spent": false,
+  "why": "upstream names tasksource as one of its three held-out benchmarks; it is free, anonymous, and a source this search never trains on"
+}

@@ -1,0 +1,38 @@
+{
+  "arm": "null2",
+  "axis": "training",
+  "change": "NOTHING, again: the champion spec, run point 3 of the null series.",
+  "pooled_top1": 0.531,
+  "control_top1": 0.4645,
+  "min_decision_score": -9.740259740259749,
+  "ece": 0.050272067387898765,
+  "checkpoint": "",
+  "spec": {
+    "readout": "option_xattn",
+    "objective": "soft_ce",
+    "steps": 300,
+    "residual": false,
+    "option_order": "shuffled",
+    "sources": "synth",
+    "freeze_base": false,
+    "readout_layer": -1,
+    "lr_head": 0.0001,
+    "eval_option_orders": [
+      "canonical",
+      "reversed"
+    ],
+    "seed": 17,
+    "xattn_heads": 4,
+    "batch_size": 16,
+    "_sweep_steps": 300,
+    "_confirmation_steps": 1500
+  },
+  "config": {
+    "model": "Qwen/Qwen3-0.6B-Base",
+    "steps": 300,
+    "confirmation_steps": 1500,
+    "batch_size": 16,
+    "seed": 17
+  },
+  "ts": 1790826877.8201559
+}

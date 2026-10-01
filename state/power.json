@@ -1,0 +1,43 @@
+{
+  "n_null_arms": 1,
+  "null_deltas": [
+    0.0665
+  ],
+  "noise_sd": 0.0,
+  "noise_max_abs": 0.0,
+  "paired_sd": 0.011,
+  "mde": {
+    "1": Infinity,
+    "2": 0.01934,
+    "3": 0.015791,
+    "4": 0.013676,
+    "5": 0.012232,
+    "6": 0.011166,
+    "7": 0.010338,
+    "8": 0.00967
+  },
+  "recommended_bar": 0.02,
+  "planned_seeds": 2,
+  "fallback_sd": 0.011,
+  "reference_effects": {
+    "upstream_data_train_split": 0.12,
+    "upstream_replay_15pct": 0.017,
+    "upstream_lower_layers_slow": 0.02,
+    "upstream_mlp_combine": 0.002,
+    "upstream_wider_coverage": 0.011,
+    "upstream_best_of_24_arms": 0.0035,
+    "upstream_data_axis_worst": 0.0015
+  },
+  "detectable": {
+    "upstream_data_train_split": true,
+    "upstream_replay_15pct": false,
+    "upstream_lower_layers_slow": true,
+    "upstream_mlp_combine": false,
+    "upstream_wider_coverage": false,
+    "upstream_best_of_24_arms": false,
+    "upstream_data_axis_worst": false
+  },
+  "verdict": "null arms: 1\n    measured noise sd: 0.0000  (FALLBACK 0.011, <2 null arms)\n    paired sd used:     0.0110\n    MDE by seed budget: 2s=0.0193, 3s=0.0158, 4s=0.0137, 5s=0.0122, 6s=0.0112, 7s=0.0103, 8s=0.0097\n    bar at 2 seeds: +0.0200\n    detectable: ['upstream_data_train_split', 'upstream_lower_layers_slow']\n    NOT detectable: ['upstream_replay_15pct', 'upstream_mlp_combine', 'upstream_wider_coverage', 'upstream_best_of_24_arms', 'upstream_data_axis_worst']",
+  "can_refute": false,
+  "note_scale": "every null here is a null AT 0.6B on MPS; it is consistent with both 'upstream's effect was never real' and 'the effect is real and smaller at this scale', and this design cannot distinguish those"
+}

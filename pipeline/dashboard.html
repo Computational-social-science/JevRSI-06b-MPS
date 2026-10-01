@@ -1,0 +1,418 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>RSI-Jev · Qwen3-0.6B</title>
+<style>
+/* ============================================================================
+   A RESEARCH INSTRUMENT, NOT A WEB APP.
+
+   The reference is a figure panel in a paper, not a SaaS dashboard: dense,
+   quiet, exact. Three rules decide everything below.
+
+   1. COLOUR CARRIES MEANING, NOTHING ELSE. Semantic tokens, each with a state
+      (ok / warn / bad / quiet / info) and a role (verified / unverified /
+      negative / underpowered). Nothing is coloured for decoration and no raw
+      hex appears outside this block. Every token has a light and a dark value,
+      because the same page is read against the Hermes theme and against white.
+   2. A TYPE SCALE, NOT SIZES. Fixed steps, so the level of a piece of text is
+      legible from its size alone.
+   3. SPACING IS A SCALE. Every gap is a multiple of 4px, so the page reads as a
+      grid even where the content is ragged.
+
+   Numbers are tabular everywhere they can be compared, because a column of
+   figures that does not align vertically cannot be scanned.
+   ========================================================================== */
+:root{
+  --t-micro:10px; --t-cap:11px; --t-sm:12px; --t-base:13px;
+  --t-md:15px; --t-lg:19px;
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px;
+  --r:6px;
+
+  --good:#0f7a4d; --good-bg:#e8f5ee;
+  --warn:#8a5a00; --warn-bg:#fdf3e0;
+  --bad:#a32b1c;  --bad-bg:#fbeae7;
+  --quiet:#5c6570;--quiet-bg:#eef0f3;
+  --info:#1f5c8b; --info-bg:#e8f0f7;
+
+  --bg:var(--card,#ffffff);
+  --fg:var(--foreground,#16191d);
+  --mut:var(--muted-foreground,#5c6570);
+  --bd:var(--border,#d9dde3);
+  --grid:var(--border,#e4e7eb);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --good:#5cc48c; --good-bg:#12251c;
+    --warn:#e0b055; --warn-bg:#2a2011;
+    --bad:#f08a76;  --bad-bg:#2d1613;
+    --quiet:#8b95a1;--quiet-bg:#1c1f24;
+    --info:#7db3dd; --info-bg:#141f29;
+  }
+}
+*{box-sizing:border-box}
+body{font:var(--t-base)/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+     margin:0;padding:var(--s5);background:var(--bg);color:var(--fg);
+     font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+h1{font:var(--t-md)/1.2 inherit;font-weight:600;margin:0;letter-spacing:-.01em}
+h2{font:var(--t-cap)/1 inherit;font-weight:600;text-transform:uppercase;
+   letter-spacing:.07em;color:var(--mut);margin:0}
+
+.hdr{display:flex;justify-content:space-between;align-items:flex-start;gap:var(--s4);
+     padding-bottom:var(--s3);border-bottom:1px solid var(--bd);margin-bottom:var(--s4)}
+.hdr .sub{font-size:var(--t-cap);color:var(--mut);margin-top:var(--s1)}
+.stamp{font-size:var(--t-cap);color:var(--mut);text-align:right;white-space:nowrap}
+.stamp b{display:block;font-size:var(--t-sm);color:var(--fg);font-weight:600}
+
+/* ---- verdict banner ---- */
+.verdict{display:flex;gap:var(--s3);align-items:flex-start;
+  padding:var(--s3) var(--s4);border:1px solid var(--bd);border-radius:var(--r);
+  margin-bottom:var(--s4);background:var(--quiet-bg)}
+.verdict .mark{flex:0 0 3px;align-self:stretch;border-radius:2px;background:var(--quiet)}
+.verdict .lab{font-size:var(--t-md);font-weight:600;line-height:1.25}
+.verdict .why{font-size:var(--t-sm);color:var(--mut);margin-top:var(--s1)}
+.verdict.ok{background:var(--good-bg);border-color:color-mix(in srgb,var(--good) 30%,transparent)}
+.verdict.ok .mark{background:var(--good)} .verdict.ok .lab{color:var(--good)}
+.verdict.warn{background:var(--warn-bg);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.verdict.warn .mark{background:var(--warn)} .verdict.warn .lab{color:var(--warn)}
+.verdict.bad{background:var(--bad-bg);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}
+.verdict.bad .mark{background:var(--bad)} .verdict.bad .lab{color:var(--bad)}
+
+/* ---- panel grid ---- */
+.grid{display:grid;gap:var(--s3);margin-bottom:var(--s3)}
+.g-32{grid-template-columns:3fr 2fr} .g-2{grid-template-columns:1fr 1fr}
+@media(max-width:1020px){.g-32,.g-2{grid-template-columns:1fr}}
+.panel{border:1px solid var(--bd);border-radius:var(--r);padding:var(--s3) var(--s4);
+       background:var(--bg)}
+.panel > h2{display:flex;justify-content:space-between;align-items:baseline;
+             gap:var(--s3);margin-bottom:var(--s3)}
+.panel .note{font-size:var(--t-micro);color:var(--mut);text-transform:none;
+             letter-spacing:0;font-weight:400;white-space:nowrap}
+
+/* ---- readout cells ---- */
+.cells{display:grid;grid-template-columns:repeat(auto-fit,minmax(116px,1fr));gap:1px;
+  background:var(--bd);border:1px solid var(--bd);border-radius:var(--r);
+  overflow:hidden;margin-bottom:var(--s3)}
+.cell{background:var(--bg);padding:var(--s3)}
+.cell .k{font-size:var(--t-micro);color:var(--mut);text-transform:uppercase;
+  letter-spacing:.06em;font-weight:600;white-space:nowrap;overflow:hidden;
+  text-overflow:ellipsis}
+.cell .v{font-size:var(--t-lg);font-weight:600;line-height:1.15;margin-top:var(--s1);
+  letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cell .n{font-size:var(--t-micro);color:var(--mut);margin-top:2px}
+.v.good{color:var(--good)} .v.warn{color:var(--warn)} .v.bad{color:var(--bad)}
+.v.quiet{color:var(--quiet)} .v.info{color:var(--info)}
+.v .of{font-size:var(--t-sm);color:var(--quiet);font-weight:400}
+
+/* ---- pills: one vocabulary for every verdict ---- */
+.pill{display:inline-flex;align-items:center;gap:5px;padding:1px var(--s2);
+  border-radius:999px;font-size:var(--t-micro);font-weight:600;white-space:nowrap;
+  line-height:1.6}
+.pill::before{content:"";width:5px;height:5px;border-radius:50%;
+  background:currentColor;flex:0 0 auto}
+.pill.good{color:var(--good);background:var(--good-bg)}
+.pill.warn{color:var(--warn);background:var(--warn-bg)}
+.pill.bad{color:var(--bad);background:var(--bad-bg)}
+.pill.quiet{color:var(--quiet);background:var(--quiet-bg)}
+.pill.info{color:var(--info);background:var(--info-bg)}
+.pill.ghost{color:var(--mut);background:transparent;border:1px solid var(--bd)}
+
+/* ---- tables ---- */
+table{width:100%;border-collapse:collapse;font-size:var(--t-sm)}
+th{font-size:var(--t-micro);text-transform:uppercase;letter-spacing:.05em;color:var(--mut);
+  font-weight:600;text-align:left;padding:var(--s1) var(--s2) var(--s2);
+  border-bottom:1px solid var(--bd);white-space:nowrap}
+td{padding:var(--s2);border-bottom:1px solid var(--grid);vertical-align:top}
+tr:last-child td{border-bottom:none}
+tbody tr:hover{background:color-mix(in srgb,var(--fg) 3%,transparent)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.name{white-space:nowrap} td.name code{font-size:var(--t-sm)}
+td.dim{color:var(--mut);font-size:var(--t-cap)}
+tr.dim{opacity:.55}
+
+/* ---- the figure ---- */
+.fig{width:100%;display:block}
+.fig text{font-family:ui-sans-serif,system-ui,sans-serif}
+.fig .tick{font-size:9.5px;fill:var(--mut)}
+.fig .axlab{font-size:10px;fill:var(--fg);font-weight:600}
+.fig .grid{stroke:var(--grid);stroke-width:1}
+.fig .base{stroke:var(--bd);stroke-width:1}
+
+/* ---- designed empty state ---- */
+.empty{padding:var(--s6) var(--s4);text-align:center;border:1px dashed var(--bd);
+  border-radius:var(--r);color:var(--mut)}
+.empty .t{font-size:var(--t-sm);font-weight:600;color:var(--fg);margin-bottom:var(--s1)}
+.empty .s{font-size:var(--t-cap);max-width:52ch;margin:0 auto;line-height:1.55}
+.empty code{font-size:var(--t-micro)}
+
+/* ---- log ---- */
+.log{font-size:var(--t-micro);line-height:1.65;
+  background:color-mix(in srgb,var(--fg) 3.5%,transparent);border:1px solid var(--bd);
+  border-radius:var(--r);padding:var(--s2) var(--s3);max-height:210px;overflow:auto;
+  white-space:pre-wrap;word-break:break-word}
+.tag-ok{color:var(--good)} .tag-bad{color:var(--bad)} .tag-warn{color:var(--warn)}
+.tag-info{color:var(--info)} .tag-quiet{color:var(--quiet)}
+
+.legend{display:flex;gap:var(--s3);flex-wrap:wrap;font-size:var(--t-micro);
+  color:var(--mut);align-items:center;margin-top:var(--s3)}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;
+  margin-right:5px;vertical-align:-1px}
+hr.sep{border:0;border-top:1px solid var(--bd);margin:var(--s3) 0}
+.note-sm{font-size:var(--t-micro);color:var(--mut);margin-top:var(--s2);line-height:1.55}
+.sig{font-size:var(--t-micro);color:var(--mut);display:flex;gap:var(--s3);
+  flex-wrap:wrap;margin-top:var(--s4);padding-top:var(--s3);
+  border-top:1px solid var(--bd)}
+</style>
+
+<div id="app"><div class="empty"><div class="s">connecting…</div></div></div>
+
+<script>
+const S={data:null,seen:new Set(),first:true};
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const n4=v=>(typeof v==="number"&&isFinite(v))?v.toFixed(4):"—";
+const sgn=v=>(typeof v==="number"&&isFinite(v))?(v>=0?"+":"")+v.toFixed(4):"—";
+const ago=s=>{if(s==null)return"—";if(s<90)return Math.round(s)+"s";
+  if(s<5400)return Math.round(s/60)+"m";if(s<172800)return Math.round(s/3600)+"h";
+  return Math.round(s/86400)+"d";};
+// Keep the `_rN` seed suffix: `champion_base` and `confirm__champion_base_r2`
+// are DIFFERENT runs on different seeds, and an earlier version stripped the
+// suffix, so a base row and each of its confirmation rows rendered identically.
+// Two rows with the same label in the seed-discipline table is exactly the bug
+// the table exists to prevent. Truncate the middle, never the seed.
+const short=s=>{
+  const t=String(s??"").replace(/^confirm__/,"");
+  return esc(t.length>26?t.slice(0,20)+"…"+t.slice(-5):t);
+};
+
+const V={kept:["confirmed",'good'],kept_pending_confirm:["unconfirmed",'warn'],
+  not_confirmed:["failed fresh seed",'bad'],rejected:["negative",'quiet'],
+  needs_repair:["repair",'warn'],kept_unverified_artifact:["artifact unverified",'bad'],
+  error:["error",'bad']};
+const R={calibration:['calibration','quiet'],decisive:['decisive','good'],
+  exploratory:['exploratory','info']};
+const D={healthy:['healthy','ok'],degraded:['degraded','warn'],
+  broken:['broken','bad'],wrong:['wrong — running the wrong science','bad']};
+const pill=(t,c)=>`<span class="pill ${c||'quiet'}">${esc(t)}</span>`;
+
+function chart(d){
+  const A=d.arms.filter(a=>a.delta!=null);
+  if(!A.length) return `<div class="empty"><div class="t">No arm has been scored</div>
+    <div class="s">The four calibration replicas run first: their spread is the noise
+    floor every later arm is judged against, so there is nothing to plot until it
+    exists.</div></div>`;
+  const W=760,H=248,P={l:54,r:18,t:16,b:60};
+  const vals=A.flatMap(a=>[a.delta,typeof a.expected_effect==="number"?a.expected_effect:null])
+              .filter(v=>typeof v==="number");
+  let lo=Math.min(...vals,0),hi=Math.max(...vals,0);
+  const sp=Math.max(hi-lo,0.02);lo-=sp*.22;hi+=sp*.22;
+  const X=i=>P.l+(A.length<2?0:i*(W-P.l-P.r)/(A.length-1));
+  const Y=v=>H-P.b-((v-lo)/(hi-lo))*(H-P.t-P.b);
+  let s=`<svg class="fig" viewBox="0 0 ${W} ${H}" role="img"
+      aria-label="Arm deltas against the champion line and the bar">`;
+  for(let k=0;k<=4;k++){
+    const v=lo+(hi-lo)*k/4,y=Y(v);
+    s+=`<line class="grid" x1="${P.l}" y1="${y.toFixed(1)}" x2="${W-P.r}" y2="${y.toFixed(1)}"/>`;
+    s+=`<text class="tick" x="${P.l-7}" y="${(y+3.2).toFixed(1)}" text-anchor="end">${v.toFixed(3)}</text>`;
+  }
+  s+=`<line x1="${P.l}" y1="${Y(0).toFixed(1)}" x2="${W-P.r}" y2="${Y(0).toFixed(1)}"
+       stroke="var(--mut)" stroke-width="1" stroke-dasharray="2 3" opacity=".5"/>`;
+  s+=`<text class="tick" x="${W-P.r}" y="${(Y(0)-5).toFixed(1)}" text-anchor="end">no change vs control</text>`;
+  if(d.power){
+    const by=Y(d.power.bar);
+    s+=`<line x1="${P.l}" y1="${by.toFixed(1)}" x2="${W-P.r}" y2="${by.toFixed(1)}"
+         stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="5 3"/>`;
+    s+=`<text class="tick" x="${P.l+4}" y="${(by-5).toFixed(1)}"
+         style="fill:var(--bad)">bar +${d.power.bar.toFixed(4)}</text>`;
+  }
+  let best=null,pts=[];
+  A.forEach((a,i)=>{if(best===null||a.delta>best)best=a.delta;
+    pts.push(`${X(i).toFixed(1)},${Y(best).toFixed(1)}`)});
+  s+=`<polyline points="${pts.join(" ")}" fill="none" stroke="var(--good)" stroke-width="2"/>`;
+  A.forEach((a,i)=>{
+    const vc=(V[a.verdict]||['?','quiet'])[1];
+    s+=`<circle cx="${X(i).toFixed(1)}" cy="${Y(a.delta).toFixed(1)}"
+         r="${a.verdict==='kept'?6:4.5}" fill="var(--${vc})" stroke="var(--bg)" stroke-width="1.5">
+         <title>${esc(a.arm)} — ${sgn(a.delta)} (${esc((V[a.verdict]||['?'])[0])})</title></circle>`;
+    if(typeof a.expected_effect==="number"&&a.expected_effect)
+      s+=`<rect x="${(X(i)-3.5).toFixed(1)}" y="${(Y(a.expected_effect)-3.5).toFixed(1)}"
+           width="7" height="7" fill="none" stroke="var(--mut)" stroke-width="1.2">
+         <title>expected ${sgn(a.expected_effect)}</title></rect>`;
+    s+=`<text class="tick" x="${X(i).toFixed(1)}" y="${H-P.b+14}" text-anchor="end"
+         transform="rotate(-45 ${X(i).toFixed(1)} ${H-P.b+14})">${short(a.arm)}</text>`;
+  });
+  s+=`<line class="base" x1="${P.l}" y1="${H-P.b}" x2="${W-P.r}" y2="${H-P.b}"/>`;
+  s+=`<text class="axlab" x="${P.l}" y="${H-5}">arms, in the order they ran</text>`;
+  s+=`<text class="axlab" x="6" y="${P.t}">Δ top-1 vs the control</text>`;
+  return s+"</svg>";
+}
+
+function banner(d){
+  const doc=d.doctor;
+  if(!doc) return `<div class="verdict bad"><div class="mark"></div><div>
+    <div class="lab">not being diagnosed</div>
+    <div class="why">The multi-agent doctor has never run. The loop may be perfectly up,
+    and nothing is checking that the science it is running is the science we said we
+    would run.</div></div></div>`;
+  const [lab,cls]=D[doc.verdict]||[doc.verdict,'warn'];
+  const A=doc.auditors||{};
+  // A diagnosis is only as good as when it was made. The doctor is written by the
+  // watchdog on its own interval, so the page can be showing a verdict that is up
+  // to one interval old — and during this redesign the live page briefly reported
+  // `degraded` from a doctor.json written while the watchdog was being restarted,
+  // long after the condition had cleared. An unlabelled stale verdict is
+  // indistinguishable from a current one, so its age is always stated, and it is
+  // called out past two intervals.
+  const ageS=typeof doc.when==="number"?(Date.now()/1000-doc.when):null;
+  const STALE=1800;
+  const staleTxt=ageS==null?"":ageS>STALE
+    ? `<span class="pill warn" style="margin-left:6px">stale ${ago(ageS)}</span>`:"";
+  const ageNote=ageS==null?"":`<div class="why">as of ${esc(doc.when_h||"")}${
+    ageS>STALE?` — ${ago(ageS)} old, past the watchdog's interval`:""}</div>`;
+  const det=Object.entries(A).filter(([,a])=>(a.critical&&a.critical.length)||
+                                          (a.major&&a.major.length));
+  const tbl=det.length?`<hr class="sep"><table><thead><tr><th>auditor</th>
+    <th class="num">checks</th><th>failures</th></tr></thead><tbody>
+    ${det.map(([n,a])=>`<tr><td class="name">${esc(n)}</td><td class="num">${a.ok}/${a.n}</td>
+      <td class="dim">${esc([...(a.critical||[]),...(a.major||[])].join("; "))}</td></tr>`).join("")}
+    </tbody></table>`:"";
+  return `<div class="verdict ${cls}"><div class="mark"></div>
+    <div style="flex:1"><div class="lab">${esc(lab)}</div>
+    <div class="why">${esc(doc.diagnosis||"")}</div>${ageNote}${tbl}</div>
+    <div class="stamp"><b>${esc(doc.when_h||"")}${staleTxt}</b>
+      <span>${Object.keys(A).length} auditors</span></div></div>`;
+}
+
+function render(d){
+  const h=d.health,pw=d.power,v=d.verdicts,cur=d.current_arm,ho=d.held_out||{};
+  const live=h.arm_running?pill("arm running",'info')
+    :(h.loop_installed?pill("idle",'quiet'):pill("loop down",'bad'));
+
+  const cells=`<div class="cells">
+   <div class="cell"><div class="k">arms</div>
+     <div class="v">${d.n_arms_done}<span class="of">/${d.n_arms_total}</span></div>
+     <div class="n">${d.progress_pct}% of the agenda</div></div>
+   <div class="cell"><div class="k">confirmed</div>
+     <div class="v ${v.kept?"good":"quiet"}">${v.kept||0}</div>
+     <div class="n">cleared every seed</div></div>
+   <div class="cell"><div class="k">unconfirmed</div>
+     <div class="v ${v.kept_pending_confirm?"warn":"quiet"}">${v.kept_pending_confirm||0}</div>
+     <div class="n">over bar, awaiting seed</div></div>
+   <div class="cell"><div class="k">negatives</div>
+     <div class="v">${v.rejected||0}</div>
+     <div class="n">${v.needs_repair||0} awaiting repair</div></div>
+   <div class="cell"><div class="k">noise floor</div>
+     <div class="v ${pw&&pw.measured?"good":"warn"}">${pw?sgn(pw.paired_sd):"—"}</div>
+     <div class="n">${pw?(pw.measured?pw.n_null_arms+" null arms":"FALLBACK, not measured"):"not measured"}</div></div>
+   <div class="cell"><div class="k">bar</div>
+     <div class="v info">${pw?"+"+n4(pw.bar):"—"}</div>
+     <div class="n">${d.champion&&!d.inconsistent?"champion + noise":"champion-less"}</div></div>
+   <div class="cell"><div class="k">champion</div>
+     <div class="v" style="font-size:var(--t-md)">${d.champion&&!d.inconsistent?esc(d.champion.arm):"—"}</div>
+     <div class="n">${d.champion&&!d.inconsistent?n4(d.champion.pooled_top1):"none yet"}</div></div>
+   <div class="cell"><div class="k">held-out</div>
+     <div class="v ${ho.spent?"warn":"good"}" style="font-size:var(--t-md)">${ho.spent?"spent":"intact"}</div>
+     <div class="n">${ho.spent?"read once, consumed":"never read"}</div></div>
+  </div>`;
+
+  const incons=d.inconsistent?`<div class="verdict bad" style="margin-bottom:var(--s3)">
+    <div class="mark"></div><div><div class="lab">inconsistent state</div>
+    <div class="why">${esc(d.inconsistent)}</div></div></div>`:"";
+
+  const fig=`<div class="panel"><h2>Trajectory
+    <span class="note">${d.n_arms_done} scored</span></h2>${chart(d)}
+    <div class="legend">
+      <span><i style="background:var(--good)"></i>confirmed</span>
+      <span><i style="background:var(--warn)"></i>unconfirmed</span>
+      <span><i style="background:var(--quiet)"></i>negative</span>
+      <span><i style="background:var(--bad)"></i>failed / error</span>
+      <span><i style="border:1.2px solid var(--mut);background:transparent"></i>expected effect</span>
+      <span><i style="background:var(--good)"></i>champion line</span>
+    </div></div>`;
+
+  const queue=`<div class="panel"><h2>Queue
+    <span class="note">by what the design can resolve</span></h2>
+    <table><thead><tr><th>arm</th><th>role</th><th class="num">expected</th></tr></thead><tbody>
+    ${d.agenda.slice(0,9).map(a=>{
+      const r=R[a.role]||['—','quiet'];
+      return `<tr class="${a.done?"dim":""}">
+        <td class="name"><code>${short(a.name)}</code>${a.done?` ${pill("done",'ghost')}`:""}</td>
+        <td>${pill(r[0],r[1])}</td><td class="num">${sgn(a.expected_effect)}</td></tr>`;}).join("")}
+    </tbody></table>
+    <div class="note-sm">Role is set from the expected effect against the detectable
+    minimum <b>before</b> the arm runs. A <i>decisive</i> arm is the only one where a
+    null is informative, so it is the only one that gets the seed budget.</div></div>`;
+
+  const rows=d.arms.slice().reverse().map(a=>{
+    const vl=(V[a.verdict]||['—'])[0],vc=(V[a.verdict]||['','quiet'])[1];
+    const und=a.underpowered&&["rejected","needs_repair","not_confirmed"].includes(a.verdict);
+    const sd=a.seeds_required>1?` ${a.seeds_done}/${a.seeds_required}`:"";
+    return `<tr>
+      <td class="name"><code>${short(a.arm)}</code><div class="dim">${esc(a.axis||"")}</div></td>
+      <td class="num">${sgn(a.delta)}</td><td class="num dim">${sgn(a.expected_effect)}</td>
+      <td>${pill(vl+sd,vc)}${und?` ${pill("underpowered",'ghost')}`:""}</td>
+      <td class="dim">${esc(a.contamination?String(a.contamination).replace(/^clean:\s*/,"verified"):"not checked")}</td></tr>`;
+  }).join("");
+  const arms=`<div class="panel"><h2>Arms
+    <span class="note">${d.n_arms_done} scored</span></h2>
+    ${rows?`<table><thead><tr><th>arm</th><th class="num">Δ vs control</th>
+      <th class="num">expected</th><th>verdict</th><th>contamination</th></tr></thead>
+      <tbody>${rows}</tbody></table>`
+    :`<div class="empty"><div class="t">Nothing scored yet</div>
+      <div class="s">${cur?`<code>${short(cur.arm)}</code> is in flight; a row appears here
+      when it completes.`:"The loop is between arms."}</div></div>`}</div>`;
+
+  const health=`<div class="panel"><h2>Health</h2>
+    <table><tbody>
+    ${[["loop in launchd",h.loop_installed],["arm running",h.arm_running],
+       ["watchdog",h.watchdog],["sleep prevented",h.sleep_prevented],
+       ["dashboard",h.dashboard_serving!==undefined?h.dashboard_serving:true]]
+      .map(([k,ok])=>`<tr><td>${esc(k)}</td>
+        <td style="width:1px">${pill(ok?"yes":"no",ok?'good':'bad')}</td></tr>`).join("")}
+    <tr><td class="dim">in flight</td><td class="dim" style="text-align:right">
+      ${cur?esc(short(cur.arm)):"—"}</td></tr>
+    <tr><td class="dim">last record</td><td class="dim" style="text-align:right">${ago(h.records_age_s)}</td></tr>
+    <tr><td class="dim">daemon log</td><td class="dim" style="text-align:right">${ago(h.daemon_log_age_s)}</td></tr>
+    </tbody></table>
+    <div class="note-sm">A silent arm is not a dead arm: the control pass is legitimately
+    quiet for tens of minutes. The watchdog judges by deadline.</div></div>`;
+
+  const cls=l=>/CHAMPION|RESULT|verified|clean/.test(l)?"tag-ok"
+    :/FAIL|ERROR|REFUSED|STALE|FAILED/.test(l)?"tag-bad"
+    :/CONFIRM|POWER|REPAIR/.test(l)?"tag-warn"
+    :/PROPOSED|RUNNING|CONFIG|HEARTBEAT/.test(l)?"tag-info":"tag-quiet";
+  const log=`<div class="panel"><h2>Loop log</h2><div class="log">${
+    esc((d.daemon_tail||[]).slice(-13).join("\n")).replace(/^(\[[^\]]+\])/gm,
+      m=>`<span class="${cls(m)}">${m}</span>`)}</div></div>`;
+
+  $("#app").innerHTML=`
+  <div class="hdr">
+    <div><h1>RSI-Jev · Qwen3-0.6B</h1>
+      <div class="sub">self-improving research loop · Qwen3-0.6B-Base on Apple MPS ·
+      re-read from disk on every request, nothing cached</div></div>
+    <div class="stamp"><b>${live}</b>${esc(d.now_h)}</div></div>
+  ${incons}${banner(d)}${cells}
+  <div class="grid g-32">${fig}${queue}</div>
+  <div class="grid g-2">${arms}${health}</div>
+  ${log}
+  <div class="sig">
+    <span>record <code>versions/current.md</code></span>
+    <span>discarded <code>versions/DISCARDED.md</code></span>
+    <span>trajectory <code>state/trajectory.html</code></span>
+    <span>doctor <code>state/doctor.json</code></span></div>`;
+  d.arms.forEach(a=>S.seen.add(a.arm));
+  S.first=false;
+}
+
+async function tick(){
+  try{
+    const r=await fetch("api/status?"+Date.now(),{cache:"no-store"});
+    S.data=await r.json(); render(S.data);
+  }catch(e){
+    if(!S.data) $("#app").innerHTML=`<div class="empty"><div class="t">Not connected</div>
+      <div class="s">This page carries no data of its own and the dashboard server is
+      unreachable. Start it with <code>python pipeline/dashboard.py</code>, or regenerate a
+      snapshot with <code>python pipeline/snapshot.py</code>.</div></div>`;
+  }
+}
+tick(); setInterval(tick,10000);
+</script>

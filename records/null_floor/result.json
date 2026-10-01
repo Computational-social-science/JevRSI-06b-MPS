@@ -1,0 +1,52 @@
+{
+  "arm": "null_floor",
+  "axis": "training",
+  "change": "NOTHING: the champion spec, run again. A null arm, to measure the noise floor the bar is set against.",
+  "champion": "null2 @ top1=0.5310",
+  "pooled_top1_candidate": 0.531,
+  "pooled_top1_control": 0.4645,
+  "min_decision_score_candidate": -9.740259740259749,
+  "min_decision_score_control": 6.493506493506493,
+  "pooled_aurc_candidate": 0.3690593258501278,
+  "pooled_aurc_control": 0.40304980420715664,
+  "ece_candidate": 0.050272067387898765,
+  "ece_control": 0.15428468917806945,
+  "n_questions": 2000,
+  "targets_used": [
+    "in_distribution",
+    "mmlu_pro_guard",
+    "typed_decisions"
+  ],
+  "per_target_top1": {
+    "in_distribution": 0.7455065359477124,
+    "typed_decisions": 0.531,
+    "mmlu_pro_guard": 0.19
+  },
+  "per_target_top1_control": {
+    "in_distribution": 0.5674019607843137,
+    "typed_decisions": 0.4645,
+    "mmlu_pro_guard": 0.215
+  },
+  "passed": false,
+  "verdict": "",
+  "reason": "",
+  "guards_failed": [],
+  "n_failed_guards": 0,
+  "prereg": {
+    "arm": "null_floor",
+    "axis": "training",
+    "change": "NOTHING: the champion spec, run again. A null arm, to measure the noise floor the bar is set against.",
+    "prediction": "This arm is a REPLICA of the champion recipe, not a do-nothing: it trains, so its delta against its own control is the champion's effect (measured at +0.0665 on the first run), NOT zero. What the series buys is the SPREAD of that delta across seeds, and the spread is the noise floor \u2014 the smallest difference this setup can honestly call a result. A single replica cannot estimate a spread, which is why null1..null3 follow it.",
+    "delta_floor": 0.006,
+    "direction": "up",
+    "null_floor_vs": "null2 @ top1=0.5310",
+    "expected_effect": 0.0,
+    "source": "CONTRIBUTING.md: null floors are measured, not assumed",
+    "ts": 1790827809.3467362
+  },
+  "train_seconds": 3316,
+  "final_loss": 0.6331608295440674,
+  "error": "",
+  "checkpoint": "",
+  "ts": 1790827812.1783419
+}
