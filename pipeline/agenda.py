@@ -368,6 +368,78 @@ AGENDA: list[Hypothesis] = [
                    "A small gain means the signal is in the general decision structure, not in "
                    "the domain vocabulary.",
     ),
+    # --- THE ARM UPSTREAM SAYS IS ITS FIRST KEEPER
+    #
+    # From upstream's own release table, verbatim: "train on the benchmark's own
+    # train split | typed-decisions 0.7794 | worth +0.12 — and it costs general
+    # knowledge, so it was rejected" and then "the same + 15% general-knowledge
+    # replay | typed-decisions 0.796 | the replay pays that cost back. The first
+    # keeper".
+    #
+    # So the data axis' largest effect is NOT a keeper, and the increment that
+    # makes it one is +0.017 — an effect this design cannot resolve on the primary
+    # metric, which is exactly why `power.REFERENCE_EFFECTS` lists
+    # upstream_replay_15pct as undetectable. That framing is wrong, and this arm is
+    # the correction. The replay does not have to beat the bar on the primary
+    # metric; it has to move the GUARD, and the guard is measured in a different
+    # unit (MMLU-Pro) where the trade-off is legible.
+    #
+    # Which matters here, because the guard is currently what makes the gate
+    # uninformative: the recipe's general-knowledge cost is -0.0413 with a spread
+    # of 0.0202 against a 0.030 tolerance, so it lands in the unresolved band and
+    # every arm comes back needs_repair for a reason that has nothing to do with
+    # whether its lever works. The one arm whose null could be informative cannot
+    # produce one. This is upstream's documented answer to precisely that.
+    #
+    # ON THE CORPUS, because it is a real difference and not to be glossed:
+    # upstream's builder takes `--base` as their spec-1-x3 specialist corpus
+    # (md5 8ddc122a...), which is a LATER artifact than the v1.0 synth this
+    # project replicates (md5 b4e0f196..., 6,977 cases, matching v1.0's description
+    # exactly). So the builder cannot be run as-is without adopting their later
+    # experiment as our base — which would be a method change, not an adaptation.
+    # What is kept is upstream's: the 15% fraction, the choice-mode-only filter, the
+    # cross-source dedup, the 8-gram containment check against BOTH the
+    # typed-decisions test split and the MMLU-Pro guard, and the refusal on any hit.
+    # What differs is the base and the pool, and the pool is built from MMLU, ARC,
+    # OpenBookQA, CommonsenseQA, SciQ and RACE — never MMLU-Pro, which is the one
+    # benchmark upstream does not train on and the one our guard is scored on.
+    Hypothesis(
+        name="data_replay_general_knowledge",
+        axis="data",
+        change="add a 15% general-knowledge replay stream (choice-mode MMLU / ARC / "
+               "OpenBookQA / CommonsenseQA / SciQ / RACE) alongside synth, which is "
+               "upstream's first keeper and the documented fix for the exact "
+               "trade-off this recipe loses",
+        spec=_spec(sources="synth,mc_replay"),
+        expected_effect=0.017,
+        source="upstream release table: 'the same + 15% general-knowledge replay | "
+               "typed-decisions 0.796 | the replay pays that cost back. The first "
+               "keeper' — and 'train on the benchmark's own train split ... it costs "
+               "general knowledge, so it was rejected'",
+        prediction="The primary metric may barely move: upstream measures the replay "
+                   "at +0.017 on top of a data-split arm, and that is below what this "
+                   "design can resolve at 3 seeds. What should move is the GUARD. "
+                   "Plain training costs -0.0413 +/- 0.0202 of MMLU-Pro here, inside "
+                   "the 0.030 tolerance's own noise, so today every arm returns "
+                   "needs_repair on an unresolvable guard. If the replay pays that "
+                   "cost back, the guard delta moves toward zero and the arm stops "
+                   "being undecidable; if it does not, the recipe is inadmissible at "
+                   "0.6B and the honest conclusion is that this lineage cannot be "
+                   "made safe by data alone. Either answer is informative, and the "
+                   "present one — an unresolvable guard on every arm — is not. "
+                   "ROLE, and it is worth being exact about why: exploratory. The "
+                   "+0.017 is a PRIMARY-metric number, so it is compared with the "
+                   "primary bar (+0.0973) and fails, correctly. Measured in the "
+                   "guard's own units the arm's expected movement is larger — it "
+                   "recovers most of a -0.0413 cost — and 3 seeds would resolve "
+                   "0.017 against a guard spread of 0.0202. Neither of those is a "
+                   "reason to relabel the number, so the arm stays exploratory and "
+                   "the honest statement is this: at 0.6B, with a primary resolution "
+                   "of 0.0973 and a guard resolution of 0.029 at 3 seeds, upstream's "
+                   "first keeper is not a decisive arm for us. It is worth running "
+                   "because it is the only arm that can make the guard decidable, "
+                   "which is a precondition for every other arm meaning anything.",
+    ),
     # --- TRAINING AXIS
     Hypothesis(
         name="train_lower_layers_soft",
