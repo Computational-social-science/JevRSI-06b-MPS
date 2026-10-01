@@ -80,8 +80,8 @@ def main() -> int:
     check("a 0.12 guard loss fails", not p, str(f))
     check("  ... and fails it as its own named guard",
           any(g.startswith("guard:") for g in f), str(f))
-    p, f, _ = gate(arm(0.700, 0.600,
-                       cand={"td": 0.70, "mmlu_pro_guard": 0.58},
+    p, f, _ = gate(arm(0.600 + B + 0.01, 0.600,
+                       cand={"td": 0.600 + B + 0.01, "mmlu_pro_guard": 0.58},
                        ctrl={"td": 0.60, "mmlu_pro_guard": 0.60}))
     check("a 0.02 guard move is tolerated", p, str(f))
 
