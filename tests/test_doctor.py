@@ -19,7 +19,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "pipeline"))
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 import doctor  # noqa: E402
+from _isolate import isolated_halt  # noqa: E402
 from invariants import Finding  # noqa: E402
 
 FAILS: list[str] = []
@@ -41,6 +43,17 @@ def bad(inv, title, severity):
 
 
 def main() -> int:
+    # `doctor.arbitrate()` can HALT the search, which is the correct behaviour and
+    # is exactly why this file must not run against the live control plane: the
+    # synthetic critical findings below would stop the unattended loop. This test
+    # reached the real `state/HALT.json` and the real audit trail, and the loop
+    # sat halted until a human noticed — the second time a suite reached across,
+    # after `test_publish.py` did the same thing.
+    with isolated_halt():
+        return _body()
+
+
+def _body() -> int:
     print("the healthy case")
     rep = doctor.arbitrate({
         "vitals": [ok("V1"), ok("V2")],

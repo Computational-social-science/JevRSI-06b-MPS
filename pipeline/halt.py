@@ -61,6 +61,18 @@ class Halt:
     findings: list[str] | None = None
     unreadable: bool = False
 
+    @property
+    def marker(self) -> Path:
+        """Where the daemon records that it has already explained this halt.
+
+        Derived from the halt file's own directory rather than from a fixed
+        STATE path, so redirecting the halt path redirects everything that goes
+        with it. A marker that lives somewhere else is shared state between two
+        things that are supposed to be independent — the live pipeline and
+        whatever is testing it.
+        """
+        return HALT.parent / "halt_logged"
+
     def to_json(self) -> dict:
         return {"active": self.active, "reason": self.reason, "since": self.since,
                 "since_h": self.since_h, "findings": self.findings or [],

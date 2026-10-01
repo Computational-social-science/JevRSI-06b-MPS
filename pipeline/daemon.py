@@ -117,7 +117,16 @@ def main() -> int:
         # full explanation is printed once and afterwards reduced to one line. A
         # halt that fills the log with its own reason is a halt nobody reads.
         sig = f"{h.since_h}|{h.reason}"
-        seen = STATE / "halt_logged"
+        # The marker lives beside the halt file, NOT in the fixed STATE dir. Two
+        # reasons, and the second one is why this was flaky: (1) a test that
+        # redirects the halt path with RSIJEV_HALT was still sharing the live
+        # pipeline's marker, so a test could suppress the live loop's first
+        # message; (2) `since_h` has one-second resolution, so two runs inside
+        # the same second produced an identical signature and the second one
+        # printed the short form — which omits how to clear it — and the test
+        # asserting on that string failed intermittently. A shared mutable marker
+        # keyed on a coarse timestamp is a race with extra steps.
+        seen = h.marker
         if not seen.is_file() or seen.read_text().strip() != sig:
             seen.write_text(sig)
             log(f"HALT      not proposing: {h.reason}")
