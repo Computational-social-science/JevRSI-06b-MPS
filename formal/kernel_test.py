@@ -28,6 +28,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from fractions import Fraction
@@ -71,11 +72,23 @@ def check(name: str, cond: bool, detail: str = "") -> None:
 
 
 def run_lean(path: Path) -> subprocess.CompletedProcess:
+    """Run the checker THROUGH LAKE, never as a bare `lean`.
+
+    Mathlib's oleans live in `.lake/packages/*/.lake/build/lib/lean`, and those
+    directories are on LEAN_PATH only when lake builds them. A bare `lean` sees
+    no `Batteries`, no `Mathlib`, and reports a hundred class-resolution errors
+    that have nothing to do with the file — which is exactly what the first
+    version of this script did, and it reported "Axioms.lean does not compile"
+    about a file that was fine.
+    """
     lean = str(_find_lean_path())
-    return subprocess.run(
-        [lean, "--root", str(FORMAL), str(path.name)],
-        cwd=FORMAL, capture_output=True, text=True, timeout=900,
-    )
+    lake = shutil.which("lake") or str(_find_lean_path().parent.parent / "bin" / "lake")
+    if lake and Path(lake).exists():
+        r = subprocess.run([str(lake), "env", "lean", path.name],
+                           cwd=FORMAL, capture_output=True, text=True, timeout=900)
+        return r
+    return subprocess.run([lean, "--root", str(FORMAL), path.name],
+                          cwd=FORMAL, capture_output=True, text=True, timeout=900)
 
 
 def _find_lean_path() -> Path:
@@ -111,9 +124,13 @@ def kernel_test() -> None:
     check("the kernel reported on every declaration", len(ax) >= 8,
           f"{len(ax)} declarations audited")
 
+    # The comprehension above destructures `kind` inside the element expression,
+    # where it is not bound -- a NameError that only fires on the SECOND list, so
+    # the first list printed correctly and the failure looked like a parsing
+    # problem rather than a scoping one.
     axiom_free = [n for n, kind, _ in ax if kind == "does not depend on any axioms"]
     with_axioms = [(n, [a.strip() for a in deps.split(",") if a.strip()])
-                   for n, _, deps in ax if kind.startswith("depends")]
+                   for n, kind, deps in ax if kind.startswith("depends")]
 
     print(f"        {len(axiom_free)} axiom-free, {len(with_axioms)} on the three basics")
     for n in axiom_free:
@@ -127,14 +144,17 @@ def kernel_test() -> None:
 
     check("no sorry anywhere (sorryAx is an axiom the kernel accepts silently)",
           "sorryAx" not in out and "sorry" not in out)
-    check("no declarations, warnings or errors emitted",
-          "error" not in out.lower() and "declaration uses 'sorry'" not in out,
-          out.strip()[:120])
+    # Scoped to lines that START a diagnostic. The naive `"error" not in out`
+    # matched the word inside the axiom report and reported a clean run as dirty.
+    diag = [l for l in out.splitlines()
+            if l.startswith(("error", "warning"))
+            or "declaration uses 'sorry'" in l]
+    check("no diagnostics emitted", not diag, str(diag[:2]))
 
     # And the theorems themselves must exist under the names the audit claims.
     for t in ("clearsBar_implies_strictly_better", "promoted_chains_strictly_increase",
               "floor_positive_is_load_bearing", "guard2_does_not_cover_guard3"):
-        check(f"{t} was audited", any(n.endswith(t) for n, _ in ax))
+        check(f"{t} was audited", any(n.endswith(t) for n, _, _ in ax))
 
 
 # ------------------------------------------------------- 2. proof ↔ pipeline
@@ -176,7 +196,13 @@ def conformance() -> None:
             champion_delta=(float(champ) if champ is not None else None),
         )
         passed, failed, _ = loop.gate(res)
-        py = "false" if (not passed and "bar" in failed) else "true"
+        # Lean reports `barFails` (true = the bar was NOT cleared); Python's gate
+        # returns `passed` (true = it was). Comparing them directly reports every
+        # row as a disagreement — all six, inverted, which is the signature of a
+        # label swap rather than of a semantic difference. Only guard 1 can fire
+        # here: the fixture sets no per-target numbers, so guards 2 and 3 have
+        # nothing to look at and `passed` is exactly "the bar held".
+        py = "false" if passed else "true"
         agree = py == rows[name]
         check(f"{name}: model says barFails={rows[name]}, Python agrees",
               agree, f"model={rows[name]} python={py}")

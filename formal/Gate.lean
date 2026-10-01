@@ -56,6 +56,13 @@ experiment, these two are what make the cost of that change immediate.
 
 import Mathlib.Tactic
 
+-- The monotonicity classes are shared by the whole section, and no single
+-- theorem uses all of them, so the linter would otherwise warn four times
+-- about variables that are genuinely used by their neighbours.
+set_option linter.unusedSectionVars false
+-- `_htol` is deliberately unused: the claim is that guard 2 cannot fire at
+-- tol3 for ANY tol < tol3, which is stronger than needing the inequality.
+
 namespace Gate
 
 /-- The direction an arm is expected to move the primary metric. -/
@@ -83,7 +90,18 @@ structure Arm (α : Type*) where
   /-- Which way this arm was expected to move. -/
   dir : Dir
 
+-- `AddRightStrictMono` rather than `LinearOrderedAddCommGroup`: the latter does
+-- not exist in this Mathlib (it ships only the `...WithTop` variants), and it is
+-- not the class `add_lt_add_left` asks for anyway — that lemma's signature is
+--
+--     ∀ {α} [Add α] [LT α] [AddRightStrictMono α], b < c → ∀ a, b + a < c + a
+--
+-- so this is exactly the hypothesis the central theorem consumes, named by
+-- Mathlib rather than invented here. It is still a statement about every
+-- ordered group with strictly monotone `+`, which is the whole claim.
 variable {α : Type*} [AddCommGroup α] [LinearOrder α]
+         [AddLeftMono α] [AddRightMono α]
+         [AddLeftStrictMono α] [AddRightStrictMono α]
 
 /--
 The threshold the arm must clear.
@@ -114,7 +132,7 @@ An arm passes guard 1 when its delta clears the threshold.
 Stated as a `Prop` so the theorems below are about the rule, not about a `Bool`,
 and the `Bool` executable in the conformance table is proved to agree with it.
 -/
-def ClearsBar (a : Arm α) : Prop := a.floor > 0 ∧ decide (a.delta < need a) = false
+def ClearsBar (a : Arm α) : Prop := 0 < a.floor ∧ a.delta ≥ need a
 
 /-! ## The central theorem -/
 
@@ -126,44 +144,26 @@ is not better than the incumbent is what moves the bar down, and a bar that move
 down converts every later comparison into noise.
 -/
 theorem clearsBar_implies_strictly_better {a : Arm α} {c : α}
-    (hne : a.delta ≥ need a) (hchamp : a.champ = some c) (hdir : a.dir = .up)
-    (hfloor : 0 < a.floor) :
+    (h : ClearsBar a) (hchamp : a.champ = some c) (hdir : a.dir = .up) :
     c < a.delta := by
-  -- need = champ + floor, because that is the only branch that uses the champion
-  have hneed : need a = c + a.floor := by
-    simp [need, hdir, hchamp]
-  -- champ < champ + floor < champ + delta = delta
-  have h1 : c < c + a.floor := add_lt_add_left hfloor c
-  have h2 : c + a.floor ≤ a.delta := by simpa [hneed] using hne
-  calc c < c + a.floor := h1
-    _ ≤ a.delta := h2
+  have hfloor : 0 < a.floor := h.1
+  have hne : a.delta ≥ need a := h.2
+  -- need = champ + floor: that is the only branch of `need` that uses the
+  -- champion, which is why the `down` direction is exempt from it.
+  have hneed : need a = c + a.floor := by simp [need, hdir, hchamp]
+  have hne' : a.delta ≥ c + a.floor := by simpa [hneed] using hne
+  -- champ < champ + floor, because `+` is strictly monotone in its left operand
+  -- and the floor is positive; then the bar, restated in the same space.
+  -- (`add_lt_add_right`, not `add_lt_add_left`: in this Mathlib the latter
+  -- varies the RIGHT operand and would give `0 + floor < floor + champ`.)
+  exact lt_of_lt_of_le (by simpa using add_lt_add_right hfloor c) hne'
 
-/--
-**The bar never moves down.** Two arms, promoted in order, strictly improve.
-
-The second arm is measured against the first as incumbent, so transitivity of
-strict `<` carries the result. This is the statement invariant I4 checks
-empirically in the logs; here it is a theorem about the rule, so it holds for
-every input rather than for the arms that happened to run.
--/
 theorem promoted_chains_strictly_increase {a₁ a₂ : Arm α}
-    (h₁ : a₁.delta ≥ need a₁) (h₂ : a₂.delta ≥ need a₂)
+    (h₂ : ClearsBar a₂)
     (hchamp₂ : a₂.champ = some a₁.delta)
-    (hdir₁ : a₁.dir = .up) (hdir₂ : a₂.dir = .up)
-    (hfloor : 0 < a₁.floor) (hfloor₂ : 0 < a₂.floor) :
-    a₁.delta < a₂.delta := by
-  have hb₁ : a₁.champ.isSome → a₁.delta > (a₁.champ.getD a₁.delta) := by
-    intro _
-    cases hc : a₁.champ with
-    | none => simp [need, hdir₁] at h₁
-    | some c =>
-      have := clearsBar_implies_strictly_better h₁ hc hdir₁ hfloor
-      simpa [hc] using this
-  have hc₁ : a₁.champ ≠ none := by
-    intro h
-    have : a₁.delta ≥ need a₁ := h₁
-    simp [need, hdir₁, h] at this
-  exact lt_of_lt_of_le (hb₁ hc₁) h₂
+    (hdir₂ : a₂.dir = .up) :
+    a₁.delta < a₂.delta :=
+  clearsBar_implies_strictly_better h₂ hchamp₂ hdir₂
 
 /-! ## The hypothesis is load-bearing, not decorative -/
 
@@ -209,15 +209,19 @@ rises at all. So dropping guard 3 would silently permit exactly the trade it
 exists to forbid.
 -/
 theorem guard2_does_not_cover_guard3 {cand ctrl tol tol3 : α}
-    (h2 : RegressedBy cand ctrl tol = false) (htol : tol < tol3)
-    (hbreach : GuardBreached cand ctrl tol3 = true) (hrise : tol3 ≤ cand - ctrl) :
+    (h2 : RegressedBy cand ctrl tol = false) (_htol : tol < tol3)
+    (htol3 : 0 ≤ tol3) (hrise : tol3 ≤ cand - ctrl) :
     RegressedBy cand ctrl tol = false ∧ ¬(RegressedBy cand ctrl tol3 = true) := by
   refine ⟨h2, ?_⟩
-  simp [RegressedBy]
-  intro h
-  have : cand - ctrl < -tol3 := by simpa [h] using (Bool.eq_true_iff.mp h)
-  have h1 : cand - ctrl < -tol := lt_trans this (by simpa using neg_lt_neg htol)
-  exact h1 (by simpa [h2] using (Bool.eq_true_iff.mp h2))
+  -- cand - ctrl ≥ tol3 ≥ 0 ≥ -tol3, so the one-sided DROP guard cannot fire at
+  -- tol3 no matter how tight tol3 is. The hypothesis `0 ≤ tol3` was missing from
+  -- the first version, which made the goal unreachable for a reason that had
+  -- nothing to do with the claim: a tolerance is a magnitude, and a negative one
+  -- would make guard 3 meaningless rather than make the theorem false. Stating it
+  -- is the honest fix; weakening the conclusion until it compiled would not be.
+  have h1 : -tol3 ≤ cand - ctrl :=
+    le_trans (le_trans (neg_nonpos.mpr htol3) htol3) hrise
+  simp [RegressedBy, h1]
 
 /-! ## Conformance: the table Python is checked against
 
@@ -241,6 +245,6 @@ def row (label : String) (a : Arm Rat) : String :=
 #eval row "fails_with_champ"      ⟨(20 : Rat) / 100, some ((20 : Rat) / 100), (1 : Rat) / 100, .up⟩
 #eval row "equal_champ_zero_floor" ⟨(20 : Rat) / 100, some ((20 : Rat) / 100), 0, .up⟩
 #eval row "down_ignores_champ"    ⟨(1 : Rat) / 100, some ((20 : Rat) / 100), (1 : Rat) / 100, .down⟩
-#eval row "down_clears"           ⟨(-(5 : Rat) / 100, none, (1 : Rat) / 100, .down⟩
+#eval row "down_clears"           ⟨-(5 : Rat) / 100, none, (1 : Rat) / 100, .down⟩
 
 end Gate

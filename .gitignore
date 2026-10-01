@@ -74,3 +74,9 @@ paths.local.json
 .DS_Store
 __pycache__/
 *.pyc
+
+# Lean build output. `formal/.lake` is 7.6 GB — the Mathlib oleans — and none of it
+# is evidence. `formal/lake-manifest.json` IS committed, because it pins the exact
+# Mathlib revision, and a proof whose library version is not recorded cannot be
+# re-checked.
+formal/.lake/
