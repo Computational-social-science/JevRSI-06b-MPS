@@ -186,6 +186,45 @@ def main() -> int:
           "; ".join(unexplained[:4]) or
           "a vendored file nobody can justify is a file nobody maintains")
 
+    print("\nour two numbers are the SAME MEASUREMENTS upstream reports")
+    # The point of the partial suite is comparability, and comparability is a claim
+    # that can rot silently: if our own loader drifted from upstream's suite loader,
+    # every number this project has ever compared with a release table would be a
+    # comparison between two different measurements, and nothing would say so.
+    #
+    # So it is asserted. The two benchmarks that need no local checkout are the
+    # primary target and the general-knowledge guard -- between them, the whole
+    # trade-off this design currently cannot see.
+    try:
+        sys.path.insert(0, str(ROOT))
+        from rsijev import targets_suite as ts
+        from rsijev.targets import load_typed_decisions
+        got = ts.load_suite(["typed_decisions_test", "mmlu_pro_1k"],
+                            decontam=False, suite="v3")
+        ours = load_typed_decisions("test")
+        n_ours = sum(len(getattr(c, "questions", []) or []) for c in ours)
+        n_suite = sum(len(getattr(c, "questions", []) or []) for c in got["typed_decisions_test"])
+        check("our primary target scores the same question count upstream's suite does",
+              n_ours == n_suite == 2000, f"ours {n_ours}, upstream suite {n_suite}")
+        check("... and the same number of cases",
+              len(ours) == len(got["typed_decisions_test"]) == 400,
+              f"ours {len(ours)}, upstream suite {len(got['typed_decisions_test'])}")
+        w = ts.SUITES["v3"]
+        cov = w["typed_decisions_test"] + w["mmlu_pro_1k"]
+        guard_n = json.loads((ROOT / "config" / "run.json").read_text()) \
+            .get("targets", {}).get("guard_n", "?")
+        check("the two loadable benchmarks carry the trade-off, in upstream's weights",
+              abs(cov - 0.281) < 1e-9,
+              f"typed_decisions {w['typed_decisions_test']} + mmlu_pro {w['mmlu_pro_1k']} "
+              f"= {cov:.3f} of the v3 suite — the primary target AND the guard")
+        check("the guard is a SUBSAMPLE of the same benchmark, and says so",
+              len(got["mmlu_pro_1k"]) == 1000,
+              f"upstream scores 1,000 MMLU-Pro rows; this project scores {guard_n} of "
+              f"them as a guard, so the two are the same benchmark at different "
+              f"sample sizes")
+    except Exception as exc:
+        check("the partial suite loads", False, f"{type(exc).__name__}: {exc}")
+
     print(f"\n{len(FAILS)} failure(s)" if FAILS else "\nALL PASS")
     return 1 if FAILS else 0
 
