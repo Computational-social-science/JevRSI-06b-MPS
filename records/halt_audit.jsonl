@@ -74,3 +74,5 @@
 {"ts": 1790842662.457639, "when_h": "2026-10-01 16:17:42", "action": "cleared", "why": "exit-code probe: I2 planted and removed", "findings": ["by test"]}
 {"ts": 1790847806.810976, "when_h": "2026-10-01 17:43:26", "action": "halted", "why": "the loop is running but the SCIENCE is not: provenance/I2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.", "findings": ["provenance/I2"]}
 {"ts": 1790847806.837872, "when_h": "2026-10-01 17:43:26", "action": "cleared", "why": "exit-code probe: I2 planted and removed", "findings": ["by test"]}
+{"ts": 1790847810.03598, "when_h": "2026-10-01 17:43:30", "action": "halted", "why": "the loop is running but the SCIENCE is not: provenance/I2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.", "findings": ["provenance/I2"]}
+{"ts": 1790847810.056263, "when_h": "2026-10-01 17:43:30", "action": "cleared", "why": "exit-code probe: I2 planted and removed", "findings": ["by test"]}
