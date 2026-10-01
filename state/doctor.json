@@ -1,8 +1,8 @@
 {
-  "verdict": "healthy",
-  "ok": true,
-  "when": 1790862301.376962,
-  "when_h": "2026-10-01 21:45:01",
+  "verdict": "wrong",
+  "ok": false,
+  "when": 1790862400.547883,
+  "when_h": "2026-10-01 21:46:40",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 360s ago"
+            "last arm-log write 459s ago"
           ],
           "repair": ""
         }
@@ -292,12 +292,11 @@
           "title": "every delta follows from its own candidate and control",
           "ok": true,
           "severity": "info",
-          "detail": "5 checks agree; first: null_floor: delta not recorded, pooled pair is self-consistent",
+          "detail": "4 checks agree; first: null_floor: delta not recorded, pooled pair is self-consistent",
           "evidence": [
             "no champion_delta recorded; pooled candidate - control = +0.066500",
             "no champion_delta recorded; pooled candidate - control = +0.043500",
             "no champion_delta recorded; pooled candidate - control = +0.094000",
-            "no champion_delta recorded; pooled candidate - control = +0.066500",
             "no champion_delta recorded; pooled candidate - control = +0.066500"
           ],
           "repair": ""
@@ -309,8 +308,8 @@
           "severity": "info",
           "detail": "the control is shared by every arm",
           "evidence": [
-            "1 distinct control value(s) across 5 arm(s)",
-            "control 0.464500: null_floor, confirm__null_floor, null1, null2 (+1 more)"
+            "1 distinct control value(s) across 4 arm(s)",
+            "control 0.464500: null_floor, confirm__null_floor, null1, null2"
           ],
           "repair": ""
         },
@@ -345,23 +344,25 @@
     },
     "reproducible": {
       "n": 3,
-      "ok": 3,
-      "critical": [],
+      "ok": 2,
+      "critical": [
+        "C2 the RUNNING loop uses the science currently on disk"
+      ],
       "major": [],
       "findings": [
         {
           "invariant": "C2",
           "title": "the RUNNING loop uses the science currently on disk",
-          "ok": true,
-          "severity": "info",
-          "detail": "every running process postdates power.py and loop.py",
+          "ok": false,
+          "severity": "critical",
+          "detail": "the loop is gating with modules older than the ones on disk: pipeline/loop.py edited after dashboard.py (pid 56358) started; pipeline/loop.py edited after watchdog.py (pid 56362) started; pipeline/loop.py edited after daemon.py (pid 57283) started",
           "evidence": [
-            "dashboard.py (pid 56358, 11 min)",
-            "watchdog.py (pid 56362, 11 min)",
-            "daemon.py (pid 57283, 7 min)",
-            "run_one.py (pid 57291, 7 min)"
+            "pipeline/loop.py edited after dashboard.py (pid 56358) started",
+            "pipeline/loop.py edited after watchdog.py (pid 56362) started",
+            "pipeline/loop.py edited after daemon.py (pid 57283) started",
+            "pipeline/loop.py edited after run_one.py (pid 57291) started"
           ],
-          "repair": ""
+          "repair": "restart the services named above so they run the code on disk; the daemon's restart waits for the arm in flight to land, because the daemon is what records that arm's result"
         },
         {
           "invariant": "C3",
@@ -388,18 +389,29 @@
       ]
     }
   },
-  "criticals": [],
+  "criticals": [
+    "reproducible/C2"
+  ],
   "majors": [],
   "minors": [],
-  "diagnosis": "all auditors agree: the loop is running and the science it is running is the science we said we would run",
+  "diagnosis": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.  HALTED: the loop will not propose another arm until a human gives a reason. The arm in flight is left to finish.",
   "halt": {
-    "active": false,
-    "reason": "",
-    "since": 0.0,
-    "since_h": "",
-    "findings": [],
+    "active": true,
+    "reason": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
+    "since": 1790862400.5480871,
+    "since_h": "2026-10-01 21:46:40",
+    "findings": [
+      "reproducible/C2"
+    ],
     "unreadable": false
   },
-  "repairs": [],
+  "repairs": [
+    {
+      "finding": "reproducible/C2",
+      "action": "restart the services named above so they run the code on disk; the daemon's restart waits for the arm in flight to land, because the daemon is what records that arm's result",
+      "safe_unattended": true,
+      "detail": "the loop is gating with modules older than the ones on disk: pipeline/loop.py edited after dashboard.py (pid 56358) started; pipeline/loop.py edited after watchdog.py (pid 56362) started; pipeline/loop.py edited after daemon.py (pid 57283) started"
+    }
+  ],
   "needs_human": false
 }

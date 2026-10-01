@@ -372,17 +372,33 @@ def append_prereg(p: Prereg) -> None:
 
 
 def read_records() -> list[dict]:
+    """Every arm's CURRENT row, folded. This is the one reader.
+
+    `records/arms.jsonl` is append-only, and a superseding row does not remove the
+    row it supersedes -- so a reader that iterates the log sees a withdrawn verdict
+    still in force and an arm counted twice. That is not hypothetical: appending
+    null_floor's corrected verdict left it visible in the status table and would
+    have put it twice in the published record.
+
+    Every other consumer -- the status line, the record, the trajectory, the
+    dashboard -- goes through here, so the fold is written once. `agenda.null_deltas`,
+    `lineage.read_arms` and the invariant panel each fold too, and that is
+    deliberate: four readers each folding on their own is how the floor and the
+    panel start disagreeing about what the record says.
+    """
     p = RECORDS / "arms.jsonl"
     if not p.is_file():
         return []
-    out = []
+    rows: list[dict] = []
     for line in p.read_text().splitlines():
-        if line.strip():
-            try:
-                out.append(json.loads(line))
-            except json.JSONDecodeError:
-                continue        # a torn final line from a kill is not a record
-    return out
+        if not line.strip():
+            continue
+        try:
+            rows.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    import agenda
+    return list(agenda.latest_by_arm(rows).values())
 
 
 def read_prereg() -> list[dict]:

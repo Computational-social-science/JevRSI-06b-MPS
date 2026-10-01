@@ -1,6 +1,6 @@
 # RSI-Jev on Qwen3-0.6B — research record
 
-*Generated 2026-10-01 20:24:29 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
+*Generated 2026-10-01 21:45:57 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
 *`state/champions.jsonl`. Not maintained by hand: it cannot drift from the*
 *data, because it is a projection of the data.*
 
@@ -98,17 +98,17 @@ Minimum detectable effect at the planned budget: **0.0973**. An arm's *role* is 
 |---|---|---|---|
 | **calibration** | replicas of the champion recipe; their SPREAD is the noise floor the bar is set at | 1 | `null_floor`, `null1`, `null2`, `null3` |
 | **decisive** | expected effect above the detectable minimum — a null here is informative | 3 | `champion_base` |
-| **exploratory** | expected effect below it — can only ever confirm, never refute | 1 | 13 arms |
+| **exploratory** | expected effect below it — can only ever confirm, never refute | 1 | 14 arms |
 
 The order is derived from the power analysis, not hand-written, so a change in the measured floor re-orders the queue instead of quietly making it wrong. The seed budget follows the role: a `decisive` arm is the only one where more seeds change what is knowable, so it is the only one they are spent on.
 
 ## 6. Results
 
-4 arms: **0 kept**, 0 published negatives, 2 needing repair, 0 errors.
+4 arms: **0 kept**, 1 published negatives, 2 needing repair, 0 errors.
 
 | arm | role | Δ vs control | expected | bar | contamination | verdict |
 |---|---|---|---|---|---|---|
-| `null_floor` | — | +0.0665 | +0.0000 | ? | verified retroactively: clean: 7414 tr | kept_pending_confirm |
+| `null_floor` | — | +0.0665 | +0.0000 | ? | verified retroactively: clean: 7414 tr | rejected |
 | `confirm__null_floor` | exploratory | +0.0435 | +0.0665 | ? | clean | not_confirmed *(underpowered)* |
 | `null1` | calibration | +0.0940 | +0.0000 | ? | clean | needs_repair |
 | `null2` | calibration | +0.0665 | +0.0000 | +0.1043 | clean | needs_repair |
