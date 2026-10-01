@@ -91,8 +91,15 @@ def check(name: str, cond: bool, detail: str = "") -> None:
 
 
 def main() -> int:
+    # Skip build and dependency directories. `.gitignore` keeps them out of the
+    # REPOSITORY, but this walks the FILESYSTEM, and `formal/.lake/` now holds
+    # 7.6 GB of vendored Mathlib — so the guard was reading someone else's
+    # source, which made it slow, made its findings depend on whether lake had
+    # finished extracting, and would eventually flag Mathlib for a metered host.
+    SKIP_DIRS = {".lake", ".git", "__pycache__", "node_modules", ".venv", "build"}
     files = [p for d in OURS for p in (ROOT / d).rglob("*")
-             if p.is_file() and p.suffix in (".py", ".json", ".sh")]
+             if p.is_file() and p.suffix in (".py", ".json", ".sh")
+             and not (SKIP_DIRS & set(p.relative_to(ROOT).parts))]
     print(f"scanning {len(files)} files under {', '.join(OURS)}")
 
     hits_metered: list[str] = []

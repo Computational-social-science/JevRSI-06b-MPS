@@ -116,6 +116,45 @@ def main() -> int:
               all(c.source == "held_out_tasksource" for c in cases))
         check("probing did NOT spend it", not held_out.is_spent())
 
+    print("\nTHE BAR IS MEASURED, NOT COPIED")
+    # The defect this pins: `loop.py` carried `BAR = 0.006`, transcribed from a
+    # different project's write-up, while the power analysis beside it measured a
+    # null at 0.0665. The gate was judging arms at 1/11th of the noise it existed
+    # to exclude. Both facts were true in the same file, one line apart.
+    import loop as _loop
+    import power as _power
+    m = _power.load()
+    check("the bar is read from the power analysis, not a constant",
+          _loop.bar() >= m.recommended_bar,
+          f"bar={_loop.bar()} power={m.recommended_bar}")
+    check("the bar clears every null arm that has actually run",
+          _loop.bar() > max(abs(d) for d in m.null_deltas),
+          f"bar={_loop.bar()} max|null|={max(abs(d) for d in m.null_deltas)}")
+    check("the bar is never below the upstream floor of 0.020",
+          _loop.bar() >= 0.020, f"bar={_loop.bar()}")
+    # The real property, not a proxy for it: move the file and watch bar() follow.
+    # A bar frozen at import is the defect all over again, and only a live read
+    # can show that it is not frozen.
+    _pf = _m_path = ROOT / "state" / "power.json"
+    _before = _loop.bar()
+    _raw = json.loads(_pf.read_text())
+    _pf.write_text(json.dumps(dict(_raw, recommended_bar=_before * 4 + 0.5)))
+    try:
+        _after = _loop.bar()
+    finally:
+        _pf.write_text(json.dumps(_raw))
+    check("bar() follows power.json instead of being frozen at import",
+          _after > _before * 2, f"{_before} -> {_after}")
+    check("... and returns to the real value when the file is restored",
+          abs(_loop.bar() - _before) < 1e-9, f"{_loop.bar()} vs {_before}")
+    # The measured bar must OVERRIDE a preregistered floor, because a floor fixed
+    # at preregistration cannot know the noise floor -- the nulls have not run yet.
+    for bad in (0.006, 0.0):
+        pr = {"delta_floor": bad}
+        got = max(float(pr.get("delta_floor", 0.0)), _loop.bar())
+        check(f"a preregistered floor of {bad} cannot lower the measured bar",
+              got >= _loop.bar(), f"effective={got}")
+
     print(f"\n{len(FAILS)} failure(s)" if FAILS else "\nALL PASS")
     return 1 if FAILS else 0
 

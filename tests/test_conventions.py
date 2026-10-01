@@ -90,6 +90,16 @@ def cjk(s: str) -> bool:
 def main() -> int:
     files = tracked()
     check("the repository has tracked files to check", bool(files), f"{len(files)} files")
+    # Scanning TRACKED files is what makes this safe: `formal/.lake` is 7.6 GB of
+    # vendored Mathlib, excluded from the repository by .gitignore but still
+    # sitting on the filesystem where an rglob would find it. The cost guard did
+    # use rglob, and its findings therefore depended on whether lake had finished
+    # extracting — a guard whose verdict depends on an unrelated download.
+    check("the scan is over TRACKED files, so vendored trees are out of reach",
+          not any("/.lake/" in f or f.startswith("formal/.lake") for f in files),
+          f"{len(files)} files")
+    check("no vendored build tree is tracked",
+          not any(".lake" in f for f in files))
 
     print("\n1. documentation and comments are in English")
     offenders: list[str] = []

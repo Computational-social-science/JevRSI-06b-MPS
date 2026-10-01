@@ -34,21 +34,28 @@ def arm(cand_top1, ctrl_top1, *, cand=None, ctrl=None, prereg=None, **kw) -> Arm
         **kw)
 
 
+import loop as _L
+B = float(_L.bar())
+
+
 def main() -> int:
     print("preregistration")
     pre = next_prereg(AGENDA[0], None)
-    check("a prediction carries a floor", pre.delta_floor == 0.006, str(pre.delta_floor))
+    import loop as _lg
+    check("a prediction carries the MEASURED bar, not upstream's 0.006",
+          pre.delta_floor >= _lg.bar() and pre.delta_floor != 0.006,
+          f"prereg={pre.delta_floor} measured={_lg.bar()}")
     check("a prediction names what it is measured against", bool(pre.null_floor_vs))
     check("a prediction states a direction", pre.direction in ("up", "down"))
     pre_c = next_prereg(AGENDA[0], {"arm": "x", "pooled_top1": 0.70})
     check("a floor against a champion names it", "x" in pre_c.null_floor_vs,
           pre_c.null_floor_vs)
 
-    print("\nthe bar: +0.006 on the primary")
-    p, f, _ = gate(arm(0.700, 0.600, cand={"td": 0.70}, ctrl={"td": 0.60}))
-    check("clearing +0.100 passes", p and not f, str(f))
-    p, f, _ = gate(arm(0.606, 0.600, cand={"td": 0.606}, ctrl={"td": 0.600}))
-    check("clearing +0.006 exactly passes", p, str(f))
+    print(f"\nthe bar on the primary (measured {B:.4f})")
+    p, f, _ = gate(arm(0.600 + B + 0.01, 0.600, cand={"td": 0.600+B+0.01}, ctrl={"td": 0.600}))
+    check(f"clearing {B+0.01:.4f} passes", p and not f, str(f))
+    p, f, _ = gate(arm(0.600 + B, 0.600, cand={"td": 0.600+B}, ctrl={"td": 0.600}))
+    check(f"clearing {B:.4f} exactly passes", p, str(f))
     p, f, _ = gate(arm(0.6055, 0.600, cand={"td": 0.6055}, ctrl={"td": 0.600}))
     check("missing by 0.0005 fails on the bar alone", (not p) and f == ["bar"], str(f))
     p, f, _ = gate(arm(0.600, 0.600, cand={"td": 0.60}, ctrl={"td": 0.60}))
@@ -57,11 +64,13 @@ def main() -> int:
     check("a loss fails", not p, str(f))
 
     print("\nguard: no target down by more than its own seed noise (0.011)")
-    p, f, _ = gate(arm(0.700, 0.600,
-                       cand={"td": 0.70, "other": 0.50}, ctrl={"td": 0.60, "other": 0.52}))
+    p, f, _ = gate(arm(0.600 + B + 0.01, 0.600,
+                       cand={"td": 0.600 + B + 0.01, "other": 0.50},
+                       ctrl={"td": 0.60, "other": 0.52}))
     check("a 0.020 drop on one target is caught", not p and "regression:other" in f, str(f))
-    p, f, _ = gate(arm(0.700, 0.600,
-                       cand={"td": 0.70, "other": 0.515}, ctrl={"td": 0.60, "other": 0.520}))
+    p, f, _ = gate(arm(0.600 + B + 0.01, 0.600,
+                       cand={"td": 0.600 + B + 0.01, "other": 0.515},
+                       ctrl={"td": 0.60, "other": 0.520}))
     check("a 0.005 drop is inside the noise", p, str(f))
 
     print("\nguard: general knowledge is not bought with forgetting (0.030)")

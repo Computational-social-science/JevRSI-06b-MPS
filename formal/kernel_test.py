@@ -163,26 +163,41 @@ def conformance() -> None:
     sys.path.insert(0, str(ROOT / "pipeline"))
     import loop  # noqa: E402
 
+    B = float(loop.bar())   # the bar this experiment actually uses
+    q = lambda x: Fraction(int(round(x * 1000000)), 1000000)   # exact-ish decimal
+    cases = {
+        "no_champion_up": (q(B + 0.01), None, q(B + 0.01), "up"),
+        "clears_with_champ": (q(0.2 + B + 0.10), q(0.2), q(B), "up"),
+        "fails_with_champ": (q(0.2 + B - 0.01), q(0.2), q(B), "up"),
+        # `floor` here is the EFFECTIVE floor the Python gate will apply, which is
+        # max(preregistered, measured). Passing 0 modelled a gate configuration
+        # the Python side can no longer be in — the measured bar overrides a
+        # preregistered zero — so the model and the gate were honestly disagreeing
+        # about what was being tested. The zero-floor property is still checked
+        # below, as a property of the model, where it belongs.
+        "equal_champ_zero_floor": (q(0.2 + B), q(0.2), q(B), "up"),
+        "down_ignores_champ": (q(B + 0.01), q(0.2), q(B), "down"),
+        "down_clears": (q(-(B + 0.01)), None, q(B), "down"),
+    }
+
     r = run_lean(FORMAL / "Gate.lean")
     if r.returncode != 0:
         check("Gate.lean compiles", False, r.stderr.strip()[:300])
         return
     check("Gate.lean compiles", True)
 
-    rows = dict(re.findall(r'"([a-z_]+)\|(true|false)"', r.stdout))
+    gr = _emit_and_run(float(loop.bar()), cases)
+    rows = dict(re.findall(r'"([a-z_]+)\|(true|false)"', gr.stdout))
+    # The table is GENERATED from `cases` rather than hand-written in Gate.lean.
+    # Two hand-maintained copies of one fixture is how the sides drift: when the
+    # measured bar moved, Lean's `#eval` rows still said 0.01 while Python said
+    # 0.133, and the conformance table reported a disagreement that was really the
+    # harness lying about the input.
     check("the model emitted its conformance table", len(rows) >= 6,
           f"{len(rows)} rows: {sorted(rows)}")
 
     # Same cases, expressed against the REAL gate. `champ` is None where the
     # model says none, because `loop.gate` reads it off the ArmResult.
-    cases = {
-        "no_champion_up": (Fraction(1, 100), None, Fraction(1, 100), "up"),
-        "clears_with_champ": (Fraction(30, 100), Fraction(20, 100), Fraction(1, 100), "up"),
-        "fails_with_champ": (Fraction(20, 100), Fraction(20, 100), Fraction(1, 100), "up"),
-        "equal_champ_zero_floor": (Fraction(20, 100), Fraction(20, 100), Fraction(0), "up"),
-        "down_ignores_champ": (Fraction(1, 100), Fraction(20, 100), Fraction(1, 100), "down"),
-        "down_clears": (Fraction(-5, 100), None, Fraction(1, 100), "down"),
-    }
     for name, (delta, champ, floor, direction) in cases.items():
         if name not in rows:
             check(f"{name} present in the model", False)
@@ -254,6 +269,25 @@ def stamp(ok: bool, failures: list[str], detail: dict) -> Path:
         "declarations_audited": detail.get("declarations", 0),
         "sources_sha256": sources,
     })
+
+
+def _rat(x: float) -> str:
+    """A Lean `Rat` literal from a Python float, exactly (no rounding drift)."""
+    n, d = (x * 1_000_000).as_integer_ratio()
+    return f"({n} : Rat) / {d}"
+
+
+def _emit_and_run(B: float, cases: dict) -> subprocess.CompletedProcess:
+    """Write the conformance rows from `cases` and run them through the model."""
+    lines = ["import Gate", "open Gate"]
+    for name, (delta, champ, floor, direction) in cases.items():
+        ch = "none" if champ is None else f"some ({_rat(float(champ))})"
+        lines.append(
+            f'#eval row "{name}" ⟨{_rat(float(delta))}, {ch}, '
+            f'{_rat(float(floor))}, .{direction}⟩')
+    src = FORMAL / "Conformance.lean"
+    src.write_text("\n".join(lines) + "\n")
+    return run_lean(src)
 
 
 if __name__ == "__main__":

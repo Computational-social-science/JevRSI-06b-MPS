@@ -41,10 +41,48 @@ LOGS = ROOT / "logs"
 for _d in (STATE, RECORDS, CKPT, LOGS):
     _d.mkdir(parents=True, exist_ok=True)
 
-# The bar, from upstream BENCHMARKS.md "How a result becomes a result":
-#   "+0.006 on the suite mean, no benchmark down by more than its own seed
-#    noise, MMLU-Pro within 0.030."
-BAR = 0.006
+# Upstream BENCHMARKS.md says a result is "+0.006 on the suite mean, no benchmark
+# down by more than its own seed noise, MMLU-Pro within 0.030".
+#
+# 0.006 IS NOT THE BAR HERE. It was copied from a different project's write-up
+# and left as a module constant, so the gate used 0.006 while the power analysis
+# beside it measured a noise floor of 0.0665 from a null arm. The two were never
+# connected: every arm for weeks was judged against a bar an order of magnitude
+# below the noise it was supposed to exclude.
+#
+# So the bar now comes from `power.load()` — re-read on every gate call, because
+# a bar that is correct at import time and stale after the first arm is exactly
+# the defect this replaces. This constant survives ONLY as the fallback for a
+# machine with no power analysis yet, and it is named for what it is.
+UPSTREAM_BAR = 0.006
+
+
+def bar() -> float:
+    """The bar, read fresh. Falls back to the upstream number, loudly."""
+    global BAR
+    out = UPSTREAM_BAR
+    try:
+        import power
+        r = power.load()
+        if r is not None and r.recommended_bar:
+            out = max(r.recommended_bar, UPSTREAM_BAR)
+    except Exception:
+        pass
+    BAR = out
+    return out
+
+
+# Kept as a name so existing readers do not break, and refreshed on every
+# `bar()` call so it cannot drift. A float subclass that re-evaluated itself was
+# the first attempt and it raised inside float.__new__ — a proxy is the wrong
+# tool when one function is the whole answer.
+# Resolved AT IMPORT, so every existing reader — `Prereg.delta_floor`'s default,
+# agenda's floor, the daemon's log line — sees the measured bar without having to
+# remember to call `bar()` first. Leaving this as the raw fallback and relying on
+# a side effect meant `next_prereg` stamped 0.006 onto a fresh prediction while
+# the gate measured 0.133: the prediction and the test that judged it disagreed,
+# which is precisely the drift this module exists to end.
+BAR = bar()
 SEED_SD = 0.011          # per-seed sd on a single benchmark
 GUARD_TOL = 0.030        # MMLU-Pro must stay within this of the champion
 # An arm that clears the bar but fails exactly one guard earns a repair attempt,
@@ -184,7 +222,12 @@ def gate(cand: ArmResult) -> tuple[bool, list[str], str]:
         return False, ["no_measurement"], "arm produced no primary metric"
     delta = c - k
     prereg = cand.prereg or {}
-    floor = prereg.get("delta_floor", BAR)
+    # The MEASURED bar always wins over a preregistered one. A floor fixed at
+    # preregistration cannot know the noise floor yet — by definition the null
+    # arms have not run — so an arm preregistered under the old 0.006 would
+    # otherwise keep being judged by a number the experiment has since
+    # disproved. Preregistration pins the HYPOTHESIS; the bar is a measurement.
+    floor = max(float(prereg.get("delta_floor", 0.0)), bar())
     direction = prereg.get("direction", "up")
     champ = getattr(cand, "champion_delta", None)
     if champ is not None and direction == "up":

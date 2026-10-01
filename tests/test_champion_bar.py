@@ -61,6 +61,13 @@ def arm(delta, *, champion_delta=None, arm_name="x", per=None, per_c=None):
     return r
 
 
+try:
+    import loop as _l
+    B = float(_l.bar())
+except Exception:
+    B = 0.020
+
+
 def main() -> int:
     print("THE DEFECT: a fixed floor on delta-vs-control is cleared by anything")
     print("that trains, so a much worse arm can be promoted over a much better one.")
@@ -73,22 +80,24 @@ def main() -> int:
           "champion" in why.lower(), why[:80])
 
     print("\nTHE FIX: the bar is champion + noise, so it rises as the champion does")
-    # "clearly above" has to clear champion + floor = 0.130 + 0.006 = 0.136.
-    a = arm(0.150, champion_delta=0.13, arm_name="better")
+    # "clearly above" means above champion + the MEASURED bar, not above a number
+    # this file used to hardcode.
+    CH = 0.130
+    a = arm(CH + B + 0.010, champion_delta=CH, arm_name="better")
     p, f, _ = gate(a)
     check("an arm clearly above the champion passes", p, str(f))
 
     a = arm(0.1305, champion_delta=0.13, arm_name="hair_over")
     p, f, _ = gate(a)
-    check("just above champion + 0.0005 does NOT pass (floor is 0.006)",
+    check(f"just above champion + 0.0005 does NOT pass (bar is {B:.4f})",
           not p and "bar" in f, str(f))
 
-    a = arm(0.136, champion_delta=0.13, arm_name="just_over")
+    a = arm(CH + B, champion_delta=CH, arm_name="just_over")
     p, f, _ = gate(a)
-    check("champion + 0.006 exactly passes", p, str(f))
+    check(f"champion + the bar exactly passes", p, str(f))
 
     print("\nTHE FIRST ARM still establishes the bar, as it must")
-    a = arm(0.0665, champion_delta=None, arm_name="first")
+    a = arm(B + 0.010, champion_delta=None, arm_name="first")
     p, f, _ = gate(a)
     check("with no champion, the first arm is judged on delta vs control",
           p, str(f))
@@ -98,7 +107,8 @@ def main() -> int:
           not p and "bar" in f, str(f))
 
     print("\nA BAR THAT CANNOT MOVE DOWN")
-    a = arm(0.10, champion_delta=0.20, arm_name="regression_attempt")
+    a = arm(CH + B + 0.01, champion_delta=CH + B + 0.05,
+            arm_name="regression_attempt")
     p, f, _ = gate(a)
     check("a well-trained arm worse than a strong champion is rejected",
           not p and "bar" in f, str(f))

@@ -115,10 +115,23 @@ class PowerResult:
     # This design confirms positives; it cannot refute them. A null is a null at
     # THIS scale, not evidence against upstream. See the module docstring.
     can_refute: bool = False
-    note_scale: str = ""
+    note_scale: str = ""    # WHY the bar has the value it has, in words. A number without its reason is
+    # an assumption, and this bar has been wrong once already.
+    bar_rationale: str = ""
 
     def to_json(self) -> dict:
-        return asdict(self)
+        """Valid JSON only.
+
+        `mde[1]` is genuinely infinite — one seed cannot detect anything — and
+        `json.dumps` writes that as the bare token `Infinity`, which no strict
+        reader accepts. `state/power.json` carried it for days. The honest
+        spelling of "no such value" is null, and the `allow_nan=False` in
+        `save()` means a second one cannot appear silently.
+        """
+        d = asdict(self)
+        d["mde"] = {k: (None if isinstance(v, float) and not math.isfinite(v) else v)
+                    for k, v in self.mde.items()}
+        return d
 
 
 # Effect sizes the reference work reports, so the power analysis is asked a
@@ -167,6 +180,13 @@ def mde_for_seeds(paired_sd: float, n_seeds: int, *, alpha: float = 0.05,
     return (z_a + z_b) * paired_sd / math.sqrt(n_seeds)
 
 
+# The margin by which the bar must clear the largest observed null. One draw's
+# maximum understates the tail by about a standard deviation, so a bar set AT the
+# observed max would be cleared by the next null roughly half the time. Two
+# multiples puts the bar beyond the noise that has been seen.
+NULL_MARGIN = 2.0
+
+
 def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
             fallback_sd: float = 0.011) -> PowerResult:
     """Turn measured null arms into a bar.
@@ -184,9 +204,15 @@ def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
     res = PowerResult(n_null_arms=len(null_deltas), null_deltas=list(null_deltas))
     res.reference_effects = dict(REFERENCE_EFFECTS)
 
+    # The largest null MAGNITUDE is available whenever there is a null at all.
+    # It is a magnitude, not a spread, so one observation is enough — and
+    # skipping it for n < 2 is exactly how a bar ended up a third of a null that
+    # had already run. `power.json` read n_null_arms 1, null_deltas [0.0665],
+    # noise_max_abs 0.0 and a bar of 0.020.
+    res.noise_max_abs = max((abs(d) for d in null_deltas), default=0.0)
+
     if len(null_deltas) >= 2:
         res.noise_sd = statistics.stdev(null_deltas)
-        res.noise_max_abs = max(abs(d) for d in null_deltas)
         # A single null rerun measures the unpaired spread. Under CRN the
         # paired sd is smaller, and we cannot know by how much without a paired
         # null arm. So we take the unpaired sd as an UPPER bound on the paired
@@ -202,8 +228,25 @@ def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
     # The bar: the effect we are powered to see at the planned seed budget.
     # Rounded UP to two significant figures so a number like 0.0044 does not
     # read as more precise than a 2,000-question estimate deserves.
-    res.recommended_bar = bar_from_mde(res.mde.get(planned_seeds, float("inf")),
-                                       fallback_sd)
+    bar_mde = bar_from_mde(res.mde.get(planned_seeds, float("inf")), fallback_sd)
+
+    # THE CORRECTION. A bar derived only from the MDE answers "what can we
+    # detect?" and never "what happens when we do nothing?". Those differ, and
+    # only the second one keeps a null arm out. The bar is therefore also raised
+    # above every null that has actually been observed, with margin: one draw's
+    # max understates the tail by roughly a standard deviation, so a bar set
+    # AT the observed max would be cleared by the next null about half the time.
+    # The margin makes the bar sit above the null, not beside it.
+    if null_deltas:
+        bar_null = res.noise_max_abs * NULL_MARGIN
+        if bar_null > bar_mde:
+            res.bar_rationale = (
+                f"set by the observed noise floor ({res.noise_max_abs:.4f} over "
+                f"{len(null_deltas)} null arm(s)), not by the MDE ({bar_mde:.4f}): "
+                f"a bar derived from detectability alone cannot exclude noise that "
+                f"has already been measured")
+            res.recommended_bar = bar_null
+    res.recommended_bar = round(res.recommended_bar, 6)
     res.planned_seeds = planned_seeds
     res.fallback_sd = fallback_sd
 
@@ -258,7 +301,9 @@ def bar_from_mde(mde: float, fallback_sd: float) -> float:
 
 def save(res: PowerResult) -> Path:
     p = STATE / "power.json"
-    p.write_text(json.dumps(res.to_json(), indent=2) + "\n")
+    # allow_nan=False makes invalid JSON an exception rather than a surprise in
+    # whatever reads this file next week.
+    p.write_text(json.dumps(res.to_json(), indent=2, allow_nan=False) + "\n")
     return p
 
 
@@ -266,7 +311,12 @@ def load() -> PowerResult | None:
     p = STATE / "power.json"
     if not p.is_file():
         return None
-    return PowerResult(**json.loads(p.read_text()))
+    raw = json.loads(p.read_text())
+    # Round-trips a null mde back to inf, so an old file and a new one behave the
+    # same and the comparison between them means something.
+    raw["mde"] = {int(k): (float("inf") if v is None else v)
+                  for k, v in raw.get("mde", {}).items()}
+    return PowerResult(**raw)
 
 
 def main() -> int:

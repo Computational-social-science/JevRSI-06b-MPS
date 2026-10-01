@@ -31,6 +31,12 @@ def check(name: str, cond: bool, detail: str = "") -> None:
         FAILS.append(name)
 
 
+import loop as _L
+_CB = 0.600   # the champion this fixture already had
+# The keeper clears champion + the measured bar, whatever that is today.
+_KEEP = _CB + float(_L.bar()) + 0.010
+
+
 def main() -> int:
     import confirm as confirmmod
     import held_out
@@ -57,8 +63,9 @@ def main() -> int:
 
         # --- STEP 1: an arm clears the bar
         keeper = ArmResult(arm="champion_base", axis="training", change="c",
-                           pooled_top1_candidate=0.720, pooled_top1_control=0.600,
-                           per_target_top1={"typed_decisions": 0.720},
+                           pooled_top1_candidate=_KEEP,
+                           pooled_top1_control=_CB,
+                           per_target_top1={"typed_decisions": _KEEP},
                            per_target_top1_control={"typed_decisions": 0.600},
                            prereg=pre.to_json())
         passed, failed, reason = gate(keeper)
