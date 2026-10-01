@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790847694.4977431,
-  "when_h": "2026-10-01 17:41:34",
+  "when": 1790847924.8366048,
+  "when_h": "2026-10-01 17:45:24",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "this diagnosis is running inside the watchdog (pid 18663)"
+            "pgrep watchdog"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 367s ago"
+            "last arm-log write 55s ago"
           ],
           "repair": ""
         }
@@ -194,8 +194,8 @@
       ]
     },
     "integrity": {
-      "n": 4,
-      "ok": 4,
+      "n": 5,
+      "ok": 5,
       "critical": [],
       "major": [],
       "findings": [
@@ -214,12 +214,24 @@
           "invariant": "I10",
           "title": "a published artifact reproduced its training run",
           "ok": true,
-          "severity": "critical",
-          "detail": "verified",
+          "severity": "info",
+          "detail": "every kept artifact verified; non-kept checkpoints are marked as evidence, not deliverables",
           "evidence": [
             "none pending"
           ],
           "repair": ""
+        },
+        {
+          "invariant": "I13",
+          "title": "only the surviving lineage keeps its weights",
+          "ok": true,
+          "severity": "info",
+          "detail": "1.79 GB held, all of it lineage",
+          "evidence": [
+            "survivor weights: none yet",
+            "ckpt total 1.79 GB"
+          ],
+          "repair": "python pipeline/lineage.py --apply"
         },
         {
           "invariant": "I11",
@@ -312,6 +324,25 @@
             "1 null arm(s); a spread needs >= 2"
           ],
           "repair": ""
+        }
+      ]
+    },
+    "reproducible": {
+      "n": 1,
+      "ok": 1,
+      "critical": [],
+      "major": [],
+      "findings": [
+        {
+          "invariant": "C1",
+          "title": "the repository is reproducible from a clean clone",
+          "ok": true,
+          "severity": "info",
+          "detail": "conventions hold",
+          "evidence": [
+            "all conventions hold"
+          ],
+          "repair": "fix the convention violations; see tests/test_conventions.py"
         }
       ]
     }
