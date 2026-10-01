@@ -1,0 +1,20 @@
+{
+  "readout": "option_xattn",
+  "objective": "soft_ce",
+  "steps": 300,
+  "residual": false,
+  "option_order": "shuffled",
+  "sources": "synth",
+  "freeze_base": false,
+  "readout_layer": -1,
+  "lr_head": 0.0001,
+  "eval_option_orders": [
+    "canonical",
+    "reversed"
+  ],
+  "seed": 47,
+  "xattn_heads": 4,
+  "batch_size": 16,
+  "_sweep_steps": 300,
+  "_confirmation_steps": 1500
+}

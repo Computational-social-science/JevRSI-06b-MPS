@@ -194,22 +194,22 @@ def auditor_vitals() -> tuple[str, list[Finding]]:
 
 def auditor_provenance() -> tuple[str, list[Finding]]:
     """Is every number traceable to a prediction that existed first?"""
-    _, F = "provenance", invariants.check_all()
-    keep = {"I1", "I2", "I3", "I4"}
+    name, F = "provenance", invariants.check_all()
+    keep = {i for i, l in invariants.LENS.items() if l == name}
     return "provenance", [f for f in F if f.invariant in keep]
 
 
 def auditor_methodology() -> tuple[str, list[Finding]]:
     """Is the science the one we said we would run?"""
-    _, F = "methodology", invariants.check_all()
-    keep = {"I5", "I6", "I7", "I8"}
+    name, F = "methodology", invariants.check_all()
+    keep = {i for i, l in invariants.LENS.items() if l == name}
     return "methodology", [f for f in F if f.invariant in keep]
 
 
 def auditor_integrity() -> tuple[str, list[Finding]]:
     """Were the guards applied?"""
-    _, F = "integrity", invariants.check_all()
-    keep = {"I9", "I10", "I11", "I12", "I13"}
+    name, F = "integrity", invariants.check_all()
+    keep = {i for i, l in invariants.LENS.items() if l == name}
     return "integrity", [f for f in F if f.invariant in keep]
 
 
@@ -363,6 +363,25 @@ def auditor_reproducible() -> tuple[str, list[Finding]]:
         repair=("restart the services named above so they run the code on disk; "
                 "the daemon's restart waits for the arm in flight to land, because "
                 "the daemon is what records that arm's result" if stale else ""))]
+    # An invariant that no auditor claims is a silent one. The doctor used to hold
+    # three hardcoded sets of IDs, one per lens, in THIS file rather than beside the
+    # checks, and a fourteenth invariant was defined, correct, and dropped without
+    # anything failing: the integrity lens reported "5/5 checks hold" with a
+    # critical finding sitting in the list it had filtered away. That is the same
+    # shape as the `ok=True` hardcode that made V2 decoration -- one level up, and
+    # worse, because it disables the mechanism rather than one check.
+    _unclaimed = sorted({f.invariant for f in invariants.check_all()} - set(invariants.LENS))
+    findings.append(Finding(
+        "C3", "every invariant is claimed by an auditor", ok=not _unclaimed,
+        severity="critical" if _unclaimed else "info",
+        detail=("an invariant no lens claims never runs, and nothing says so -- "
+                "the panel would report itself healthy while a check it does not "
+                "perform goes unread" if _unclaimed else
+                f"all {len(invariants.LENS)} invariants are assigned to a lens"),
+        evidence=([f"unclaimed: {', '.join(_unclaimed)}"] if _unclaimed else
+                   [", ".join(f"{k}->{v}" for k, v in sorted(invariants.LENS.items())[:6]) + " ..."]),
+        repair=("add the invariant to invariants.LENS, beside the check itself, so "
+                "the assignment and the check cannot drift apart" if _unclaimed else "")))
     findings.append(Finding(
         "C1", "the repository is reproducible from a clean clone",
         ok=r.returncode == 0,

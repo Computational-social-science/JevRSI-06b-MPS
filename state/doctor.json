@@ -1,8 +1,8 @@
 {
   "verdict": "wrong",
   "ok": false,
-  "when": 1790860123.918903,
-  "when_h": "2026-10-01 21:08:43",
+  "when": 1790861207.83902,
+  "when_h": "2026-10-01 21:26:47",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -28,7 +28,7 @@
           "severity": "critical",
           "detail": "two arms writing the same records/<arm>/ and ckpt/<arm>/ at once is the duplicate-measurement failure this project has already paid for once -- two arm names, one run, left in records/ where a reader takes them for points of a spread. This check was hardcoded ok=True and therefore blind to exactly that: two null2 processes were live for 20 minutes on 2026-10-01 and this panel could not see them.",
           "evidence": [
-            "arm pids: none"
+            "arm pids: ['52293']"
           ],
           "repair": ""
         },
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "this diagnosis is running inside the watchdog (pid 49002)"
+            "pgrep watchdog"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 2677s ago"
+            "last arm-log write 316s ago"
           ],
           "repair": ""
         }
@@ -102,7 +102,7 @@
           "severity": "critical",
           "detail": "4 result(s), all preregistered",
           "evidence": [
-            "4 results, 9 preregs"
+            "4 results, 10 preregs"
           ],
           "repair": ""
         },
@@ -113,7 +113,7 @@
           "severity": "major",
           "detail": "none dangling",
           "evidence": [
-            "in flight: None"
+            "in flight: null3"
           ],
           "repair": ""
         },
@@ -161,10 +161,11 @@
           "invariant": "I6",
           "title": "the queue is obeyed",
           "ok": true,
-          "severity": "info",
+          "severity": "major",
           "detail": "in order",
           "evidence": [
-            "idle; next up would be null3"
+            "queue head: null3",
+            "in flight : null3"
           ],
           "repair": ""
         },
@@ -193,9 +194,11 @@
       ]
     },
     "integrity": {
-      "n": 5,
+      "n": 6,
       "ok": 5,
-      "critical": [],
+      "critical": [
+        "I14 a kept arm has weights on disk"
+      ],
       "major": [],
       "findings": [
         {
@@ -231,6 +234,17 @@
             "ckpt total 0.00 GB"
           ],
           "repair": "python pipeline/lineage.py --apply"
+        },
+        {
+          "invariant": "I14",
+          "title": "a kept arm has weights on disk",
+          "ok": false,
+          "severity": "critical",
+          "detail": "a keeper with no weights cannot be re-scored from disk, cannot be verified per question, cannot be published and cannot be measured on the held-out set \u2014 and cannot be compared with upstream's model on a shared evaluator, which is the entire claim this project exists to test",
+          "evidence": [
+            "kept with no weights: null_floor (kept_pending_confirm, checkpoint=none)"
+          ],
+          "repair": "an arm that clears the bar must be run with --save-dir; config/run.json's save_ckpt_for and the daemon's first-arm rule both default to saving, so a keeper with an empty checkpoint means the save was skipped"
         },
         {
           "invariant": "I11",
@@ -331,12 +345,10 @@
       ]
     },
     "reproducible": {
-      "n": 2,
-      "ok": 1,
+      "n": 3,
+      "ok": 3,
       "critical": [],
-      "major": [
-        "C1 the repository is reproducible from a clean clone"
-      ],
+      "major": [],
       "findings": [
         {
           "invariant": "C2",
@@ -345,48 +357,60 @@
           "severity": "info",
           "detail": "every running process postdates power.py and loop.py",
           "evidence": [
-            "dashboard.py (pid 47788, 4 min)",
-            "daemon.py (pid 48998, 0 min)",
-            "watchdog.py (pid 49002, 0 min)"
+            "dashboard.py (pid 51293, 10 min)",
+            "watchdog.py (pid 51297, 10 min)",
+            "daemon.py (pid 52284, 6 min)",
+            "run_one.py (pid 52293, 6 min)"
+          ],
+          "repair": ""
+        },
+        {
+          "invariant": "C3",
+          "title": "every invariant is claimed by an auditor",
+          "ok": true,
+          "severity": "info",
+          "detail": "all 14 invariants are assigned to a lens",
+          "evidence": [
+            "I1->provenance, I10->integrity, I11->integrity, I12->integrity, I13->integrity, I14->integrity ..."
           ],
           "repair": ""
         },
         {
           "invariant": "C1",
           "title": "the repository is reproducible from a clean clone",
-          "ok": false,
-          "severity": "major",
-          "detail": "a hardcoded path, an unpinned dependency, a missing licence or non-English documentation means the numbers cannot be re-derived",
+          "ok": true,
+          "severity": "info",
+          "detail": "conventions hold",
           "evidence": [
-            "FAIL  no commit since vendoring has touched the vendored tree  [1 commit(s) \u2014 vendoring is only worth doing if the vendored code is left alone]"
+            "all conventions hold"
           ],
           "repair": "fix the convention violations; see tests/test_conventions.py"
         }
       ]
     }
   },
-  "criticals": [],
-  "majors": [
-    "reproducible/C1"
+  "criticals": [
+    "integrity/I14"
   ],
+  "majors": [],
   "minors": [],
-  "diagnosis": "the loop is running but the SCIENCE is not: reproducible/C1. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.  HALTED: the loop will not propose another arm until a human gives a reason. The arm in flight is left to finish.",
+  "diagnosis": "the loop is running but the SCIENCE is not: integrity/I14. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.  HALTED: the loop will not propose another arm until a human gives a reason. The arm in flight is left to finish.",
   "halt": {
     "active": true,
-    "reason": "the loop is running but the SCIENCE is not: reproducible/C1. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
-    "since": 1790860123.9200158,
-    "since_h": "2026-10-01 21:08:43",
+    "reason": "the loop is running but the SCIENCE is not: integrity/I14. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
+    "since": 1790861207.839247,
+    "since_h": "2026-10-01 21:26:47",
     "findings": [
-      "reproducible/C1"
+      "integrity/I14"
     ],
     "unreadable": false
   },
   "repairs": [
     {
-      "finding": "reproducible/C1",
-      "action": "fix the convention violations; see tests/test_conventions.py",
+      "finding": "integrity/I14",
+      "action": "an arm that clears the bar must be run with --save-dir; config/run.json's save_ckpt_for and the daemon's first-arm rule both default to saving, so a keeper with an empty checkpoint means the save was skipped",
       "safe_unattended": true,
-      "detail": "a hardcoded path, an unpinned dependency, a missing licence or non-English documentation means the numbers cannot be re-derived"
+      "detail": "a keeper with no weights cannot be re-scored from disk, cannot be verified per question, cannot be published and cannot be measured on the held-out set \u2014 and cannot be compared with upstream's model on a shared evaluator, which is the entire claim this project exists to test"
     }
   ],
   "needs_human": false

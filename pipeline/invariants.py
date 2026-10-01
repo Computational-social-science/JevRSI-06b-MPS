@@ -114,6 +114,26 @@ def _delta(r: dict) -> float | None:
     return c - k
 
 
+# WHICH AUDITOR OWNS WHICH INVARIANT.
+#
+# This mapping exists because the doctor used to hold three hardcoded sets of IDs,
+# one per lens, in a different file. That worked until a fourteenth invariant was
+# added: it was defined, it was correct, and it was silently dropped, because
+# nothing failed when an ID was unclaimed. The doctor's own integrity lens then
+# reported "5/5 checks hold" while a critical finding sat in the list it had
+# filtered away -- the same shape as the `ok=True` hardcode that made V2
+# decoration, one level up and worse, because it disables the whole mechanism
+# rather than one check.
+#
+# Declared HERE, beside the checks, and asserted by the doctor: an invariant that
+# no lens claims is a finding, not a silence.
+LENS: dict[str, str] = {
+    "I1": "provenance", "I2": "provenance", "I3": "provenance", "I4": "provenance",
+    "I5": "methodology", "I6": "methodology", "I7": "methodology", "I8": "methodology",
+    "I9": "integrity", "I10": "integrity", "I11": "integrity", "I12": "integrity",
+    "I13": "integrity", "I14": "integrity",
+}
+
 def running_arm() -> str | None:
     """Which arm is in flight RIGHT NOW — or None, meaning none is.
 
@@ -400,7 +420,13 @@ def check_all() -> list[Finding]:
             continue
         v_ = r_.get("verdict")
         survived = (v_ == "kept" and str(r_.get("artifact", "")).startswith("verified"))
-        if survived or a_ == champ_arm or a_ == _in_flight:
+        # A keeper awaiting its fresh-seed confirmation is the candidate parent in
+        # all but name. It is not stale, and treating it as stale is what emptied
+        # `ckpt/`: the arm had cleared the bar, the confirmation had not run, and
+        # the only artifact a keeper would ever have was collected as if it were a
+        # discarded offspring's.
+        pending = (v_ == "kept_pending_confirm")
+        if survived or pending or a_ == champ_arm or a_ == _in_flight:
             survivor_ckpt.append(str(a_))
         else:
             stale_ckpt.append(f"{a_} ({v_}, {v_ and (sum(f.stat().st_size for f in (ROOT/'ckpt'/str(a_)).rglob('*') if f.is_file())/1e9):.2f} GB)")
@@ -418,6 +444,52 @@ def check_all() -> list[Finding]:
                                [f"survivor weights: {', '.join(survivor_ckpt) or 'none yet'}",
                                 f"ckpt total {held/1e9:.2f} GB"]),
                      repair="python pipeline/lineage.py --apply"))
+
+    # ---- I14 a keeper that has no weights is not a keeper
+    #
+    # The mirror of I13, and the check whose absence cost this project its first
+    # four arms. I13 asks that DISCARDED arms not keep their bytes; nothing asked
+    # that a KEPT arm have any. So `null_floor` -- which cleared the bar and became
+    # `kept_pending_confirm` -- was run with `ckpt=no`, and by the time anyone
+    # looked, `ckpt/` was empty and no arm on record had weights at all.
+    #
+    # That is not untidy. Upstream's loop ends in a released checkpoint that is
+    # re-scored from disk and must reproduce its training run's per-question
+    # predictions, and the held-out set is spent on a MODEL rather than on a
+    # number. Both are impossible with no weights: there is nothing to re-score and
+    # nothing to hold out. A search that cannot publish has spent its compute on
+    # arithmetic.
+    #
+    # The consequence for this project's own question is sharper still. Its whole
+    # claim is that upstream's conclusions are general laws rather than artefacts
+    # of one backbone -- and that claim can only be checked by scoring the two
+    # models side by side on a shared evaluator. Zero checkpoints on disk means the
+    # comparison cannot be made at all, however many arms the loop completes.
+    weightless = []
+    for r_ in arms:
+        if r_.get("verdict") not in ("kept", "kept_pending_confirm"):
+            continue
+        a_ = str(r_.get("arm", "?"))
+        if not (ROOT / "ckpt" / a_).is_dir():
+            weightless.append(f"{a_} ({r_.get('verdict')}, checkpoint="
+                              f"{r_.get('checkpoint') or 'none'})")
+    F.append(Finding("I14", "a kept arm has weights on disk", ok=not weightless,
+                     severity="critical" if weightless else "info",
+                     detail=("a keeper with no weights cannot be re-scored from "
+                             "disk, cannot be verified per question, cannot be "
+                             "published and cannot be measured on the held-out set "
+                             "— and cannot be compared with upstream's model on a "
+                             "shared evaluator, which is the entire claim this "
+                             "project exists to test"
+                             if weightless else
+                             f"{len(survivor_ckpt)} survivor arm(s), weights present"),
+                     evidence=([f"kept with no weights: {', '.join(weightless)}"]
+                               if weightless else
+                               [f"ckpt dirs: {', '.join(sorted(p.name for p in (ROOT / 'ckpt').iterdir() if p.is_dir())) or 'none'}"]),
+                     repair=("an arm that clears the bar must be run with --save-dir; "
+                             "config/run.json's save_ckpt_for and the daemon's "
+                             "first-arm rule both default to saving, so a keeper "
+                             "with an empty checkpoint means the save was skipped")))
 
     # ---- I11 one kernel stack
     stacks = set()

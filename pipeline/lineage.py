@@ -65,6 +65,24 @@ RECORDS = ROOT / "records" / "arms.jsonl"
 SURVIVED = "survived"
 DISCARDED = "discarded"
 ERRORED = "errored"
+# A keeper that has cleared the bar on the seed it was selected on and is waiting
+# for its fresh-seed confirmation. It is NOT discarded, and the distinction is the
+# whole content of the confirmation discipline: the arm is the current candidate
+# parent, and its weights are the deliverable-in-waiting.
+#
+# This state did not exist until 2026-10-01, and its absence had a consequence
+# that is easy to miss. `kept_pending_confirm` fell through to DISCARDED, so
+# `collect()` deleted its weights — and because `champion.json` is only written
+# when an arm is fully `kept`, and no arm was ever fully kept, `champ` was None
+# and the guard "never touch the champion" protected nothing. Four arms of compute
+# later, `ckpt/` was empty: the loop had produced numbers whose weights were gone,
+# so there was nothing to re-score from disk, nothing to verify per-question, and
+# nothing that could ever be published or measured on the held-out set.
+#
+# The rule this module enforces is "weights are lineage, not evidence", and it was
+# being applied one step too early: a pending candidate's weights are lineage, and
+# lineage is what you keep.
+PENDING = "pending_confirmation"
 
 # Verdicts that mean "no valid measurement was produced". Everything else that
 # is not a keeper is a discard: it ran, it measured, the answer was no.
@@ -81,6 +99,9 @@ class Arm:
     keep: bool = False
     discard: bool = False
     crash: bool = False
+    # Cleared the bar, awaiting its fresh-seed confirmation: the candidate parent,
+    # and the only arm whose weights are a deliverable-in-waiting.
+    pending: bool = False
     has_ckpt: bool = False
     ckpt_bytes: int = 0
     reason: str = ""
@@ -98,6 +119,8 @@ def classify(rec: dict) -> str:
     v = rec.get("verdict") or ""
     if v in NO_MEASUREMENT or rec.get("error"):
         return ERRORED
+    if v == "kept_pending_confirm":
+        return PENDING
     if v == "kept" and rec.get("artifact", "").startswith("verified"):
         return SURVIVED
     return DISCARDED
@@ -145,6 +168,10 @@ def lineage() -> list[Arm]:
             role=str(r.get("role", "")),
             keep=(surv == SURVIVED), discard=(surv == DISCARDED),
             crash=(surv == ERRORED),
+            # A pending candidate is neither a keeper nor a discard. Folding it into
+            # either is what made the record claim a lineage that the disk did not
+            # have: `n_keep + n_discard + n_crash` must equal the number of arms.
+            pending=(surv == PENDING),
             has_ckpt=has, ckpt_bytes=nbytes,
             reason=str(r.get("reason", ""))[:200],
         ))
@@ -199,6 +226,13 @@ def collect(apply: bool = False) -> dict:
         if a.arm == champ:
             kept.append(a.arm)
             continue
+        # A candidate awaiting its fresh-seed confirmation is the current parent in
+        # all but name, and its weights are the only artifact a keeper would ever
+        # have. Collecting it here is how `ckpt/` ended up empty: the arm had
+        # cleared the bar, the confirmation had not yet run, and the bytes went.
+        if a.survival == PENDING:
+            kept.append(a.arm)
+            continue
         if in_flight and a.arm == in_flight:
             kept.append(a.arm)
             continue
@@ -231,13 +265,19 @@ def series() -> dict:
         out.append({
             "arm": a.arm, "role": a.role, "delta": a.delta,
             "keep": survived,
-            "discard": (not survived) and not a.crash,
+            # A pending candidate is neither. Reporting it as a discard drew a
+            # trajectory in which the loop's one keeper had been thrown away, which
+            # is the opposite of what had happened: it had cleared the bar and was
+            # waiting for the seed it was not selected on.
+            "pending": (not survived) and a.pending,
+            "discard": (not survived) and not a.crash and not a.pending,
             "crash": a.crash,
             "confirmations": [{"arm": c.arm, "delta": c.delta, "keep": c.keep}
                               for c in confs],
         })
     return {"series": out,
             "n_keep": sum(1 for r in out if r["keep"]),
+            "n_pending": sum(1 for r in out if r["pending"]),
             "n_discard": sum(1 for r in out if r["discard"]),
             "n_crash": sum(1 for r in out if r["crash"])}
 
@@ -256,7 +296,14 @@ def render() -> str:
         d = f"{a.delta:+.4f}" if a.delta is not None else "—"
         L.append(f"  {a.arm:30s} {a.survival:10s} {a.verdict:22s} {d:>9s}  {mark}")
     L.append("")
-    L.append(f"  keep {s['n_keep']}   discard {s['n_discard']}   crash {s['n_crash']}")
+    L.append(f"  keep {s['n_keep']}   pending-confirm {s['n_pending']}   "
+             f"discard {s['n_discard']}   crash {s['n_crash']}")
+    # The arithmetic is the check. keep + pending + discard + crash must be the
+    # number of arms, because a state that is not one of the four is a state the
+    # record can describe and the disk cannot.
+    total = s["n_keep"] + s["n_pending"] + s["n_discard"] + s["n_crash"]
+    L.append(f"  {total} accounted for of {len(arms)} recorded"
+             + ("" if total == len(arms) else "   <-- MISMATCH"))
     c = collect(apply=False)
     if c["removed"]:
         L.append(f"  collectable now: {c['freed_gb']:.2f} GB — {', '.join(c['removed'])}")
