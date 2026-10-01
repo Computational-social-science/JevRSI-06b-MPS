@@ -225,6 +225,82 @@ def main() -> int:
     except Exception as exc:
         check("the partial suite loads", False, f"{type(exc).__name__}: {exc}")
 
+    print("\nno source file points at a script that is not there")
+    # Dangling path references are the failure mode of every rename, and they are
+    # silent until something runs the line that contains them. This one bit: renaming
+    # scripts/build_corpus.py to build_replication_corpus.py was done with a string
+    # replace, which caught `"scripts/build_corpus.py"` written as a literal and
+    # missed `"scripts" / "build_corpus.py"` written as a path join -- so
+    # tests/test_sources.py raised FileNotFoundError every run for two hours, and a
+    # test suite run that happened before the rename reported it green.
+    #
+    # A test that cannot find a file it was told to read is not a failing assertion,
+    # it is a crash, and a crash in a suite is a line of output nobody reads. So the
+    # references are checked here instead, where the check can be a check.
+    import ast as _ast
+    import re as _re
+
+    # Vendored files are upstream's text, not ours: the manifest governs them, and a
+    # path that does not resolve inside a file we are forbidden to edit is upstream's
+    # business, not a defect here.
+    vendored = set()
+    _man = ROOT / "rsijev" / ".upstream_manifest.json"
+    if _man.is_file():
+        vendored = {p for p, r in json.loads(_man.read_text())["files"].items()
+                    if r.get("status") == "vendored"}
+
+    def _code_strings(path: Path) -> list[str]:
+        """String CONSTANTS that are not docstrings -- i.e. strings code can use.
+
+        Scanning raw text finds prose: the comment in this very file that names
+        `scripts/build_corpus.py` to explain why it was renamed, and upstream's own
+        messages inside vendored files. A check that cries wolf on a healthy tree is
+        the fastest way to teach a reader to ignore the panel, so the scan is over
+        the AST and docstrings are excluded -- a docstring cannot be a path.
+        """
+        out = []
+        try:
+            tree = _ast.parse(path.read_text())
+        except (OSError, SyntaxError):
+            return out
+        docstrings = set()
+        for node in _ast.walk(tree):
+            if isinstance(node, (_ast.Module, _ast.FunctionDef, _ast.AsyncFunctionDef,
+                                 _ast.ClassDef)):
+                d = _ast.get_docstring(node, clean=False)
+                if d is not None:
+                    docstrings.add(d)
+        for node in _ast.walk(tree):
+            if isinstance(node, _ast.Constant) and isinstance(node.value, str):
+                if node.value in docstrings:
+                    continue
+                out.append(node.value)
+        return out
+
+    # The path pattern, kept out of the f-string below so the quoting stays sane:
+    # a character class ending in a quote character terminates a triple-quoted string.
+    _PATH = _re.compile(r"(?:pipeline|scripts|rsijev)/[A-Za-z0-9_./-]+\.(?:py|sh|json|lean)")
+    _MODULE = ("contract", "targets", "targets_suite", "metrics", "evaluate",
+               "encode", "arch", "data", "train", "calibrate", "fit", "rl2")
+    dangling: list[str] = []
+    for d in ("pipeline", "scripts", "tests"):
+        for p in sorted((ROOT / d).rglob("*")):
+            if p.suffix not in (".py", ".sh") or not p.is_file():
+                continue
+            if str(p.relative_to(ROOT)) in vendored:
+                continue
+            texts = _code_strings(p) if p.suffix == ".py" else [p.read_text()]
+            for s in texts:
+                for m in _PATH.finditer(s):
+                    rel = m.group(0)
+                    if rel.startswith("rsijev/") and rel[len("rsijev/"):-3] in _MODULE:
+                        continue          # a MODULE path, imported rather than opened
+                    if not (ROOT / rel).exists():
+                        dangling.append(f"{p.name} -> {rel}")
+    check("no source file references a path that does not exist", not dangling,
+          "; ".join(sorted(set(dangling))[:4]) or
+          "a rename that misses a path-join form leaves a test crashing on every run")
+
     print(f"\n{len(FAILS)} failure(s)" if FAILS else "\nALL PASS")
     return 1 if FAILS else 0
 

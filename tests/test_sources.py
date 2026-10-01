@@ -67,8 +67,8 @@ def main() -> int:
           r.stdout.strip() == "https://huggingface.co", r.stdout.strip())
 
     print("\n3. the corpus builder, which runs by hand and imports dev never")
-    src = (ROOT / "scripts" / "build_corpus.py").read_text()
-    check("build_corpus.py sets the endpoint itself", MIRROR in src)
+    src = (ROOT / "scripts" / "build_replication_corpus.py").read_text()
+    check("build_replication_corpus.py sets the endpoint itself", MIRROR in src)
     # Import it for real rather than exec'ing a slice: an `exec` of the first
     # `def main` gives a truncated module, so a failure here would be the probe's
     # fault and not the script's. The assertion is also the one that matters --
@@ -78,7 +78,7 @@ def main() -> int:
     r = subprocess.run(
         [sys.executable, "-c",
          "import runpy, os, sys;"
-         "sys.argv=['build_corpus.py'];"
+         "sys.argv=['build_replication_corpus.py'];"
          "\ntry:\n runpy.run_path('scripts/build_replication_corpus.py', run_name='not_main')\n"
          "except SystemExit:\n pass\n"
          "print('ENDPOINT=' + os.environ.get('HF_ENDPOINT',''))"],
