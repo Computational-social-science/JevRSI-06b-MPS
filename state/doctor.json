@@ -1,8 +1,8 @@
 {
-  "verdict": "wrong",
-  "ok": false,
-  "when": 1790862441.3030348,
-  "when_h": "2026-10-01 21:47:21",
+  "verdict": "healthy",
+  "ok": true,
+  "when": 1790863315.235337,
+  "when_h": "2026-10-01 22:01:55",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -28,7 +28,7 @@
           "severity": "critical",
           "detail": "two arms writing the same records/<arm>/ and ckpt/<arm>/ at once is the duplicate-measurement failure this project has already paid for once -- two arm names, one run, left in records/ where a reader takes them for points of a spread. This check was hardcoded ok=True and therefore blind to exactly that: two null2 processes were live for 20 minutes on 2026-10-01 and this panel could not see them.",
           "evidence": [
-            "arm pids: none"
+            "arm pids: ['60549']"
           ],
           "repair": ""
         },
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "pgrep watchdog"
+            "this diagnosis is running inside the watchdog (pid 59670)"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 30s ago"
+            "last arm-log write 611s ago"
           ],
           "repair": ""
         }
@@ -91,11 +91,9 @@
     },
     "provenance": {
       "n": 4,
-      "ok": 3,
+      "ok": 4,
       "critical": [],
-      "major": [
-        "I2 no prediction left unresolved"
-      ],
+      "major": [],
       "findings": [
         {
           "invariant": "I1",
@@ -104,18 +102,18 @@
           "severity": "critical",
           "detail": "5 result(s), all preregistered",
           "evidence": [
-            "5 results, 11 preregs"
+            "5 results, 12 preregs"
           ],
           "repair": ""
         },
         {
           "invariant": "I2",
           "title": "no prediction left unresolved",
-          "ok": false,
+          "ok": true,
           "severity": "major",
-          "detail": "a preregistration with no result and nothing running is an unclosed prediction",
+          "detail": "none dangling",
           "evidence": [
-            "unresolved: ['null3']"
+            "in flight: null3"
           ],
           "repair": ""
         },
@@ -163,10 +161,11 @@
           "invariant": "I6",
           "title": "the queue is obeyed",
           "ok": true,
-          "severity": "info",
+          "severity": "major",
           "detail": "in order",
           "evidence": [
-            "idle; next up would be null3"
+            "queue head: null3",
+            "in flight : null3"
           ],
           "repair": ""
         },
@@ -356,8 +355,10 @@
           "severity": "info",
           "detail": "every running process postdates power.py and loop.py",
           "evidence": [
-            "dashboard.py (pid 59666, 1 min)",
-            "watchdog.py (pid 59670, 1 min)"
+            "dashboard.py (pid 59666, 15 min)",
+            "watchdog.py (pid 59670, 15 min)",
+            "daemon.py (pid 60540, 11 min)",
+            "run_one.py (pid 60549, 11 min)"
           ],
           "repair": ""
         },
@@ -387,19 +388,15 @@
     }
   },
   "criticals": [],
-  "majors": [
-    "provenance/I2"
-  ],
+  "majors": [],
   "minors": [],
-  "diagnosis": "the loop is running but the SCIENCE is not: provenance/I2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.  HALTED: the loop will not propose another arm until a human gives a reason. The arm in flight is left to finish.",
+  "diagnosis": "all auditors agree: the loop is running and the science it is running is the science we said we would run",
   "halt": {
-    "active": true,
-    "reason": "the loop is running but the SCIENCE is not: provenance/I2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
-    "since": 1790862412.901031,
-    "since_h": "2026-10-01 21:46:52",
-    "findings": [
-      "provenance/I2"
-    ],
+    "active": false,
+    "reason": "",
+    "since": 0.0,
+    "since_h": "",
+    "findings": [],
     "unreadable": false
   },
   "repairs": [],

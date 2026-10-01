@@ -1,0 +1,100 @@
+{
+  "_comment": [
+    "The suite's upstream checkouts, and the exact commits rsijev/targets_suite.py",
+    "pins. Read by pipeline/bench_roots.py, which sets the loader's root variables",
+    "before the loader is imported and checks each HEAD against the pin -- because a",
+    "path is not a pin, and a checkout at the wrong commit is a different split",
+    "wearing the same name.",
+    "",
+    "Upstream's reason for using the environment at all: 'The loaders read a few",
+    "upstream checkouts from the environment ... None has a default: a default",
+    "would be one author's filesystem, which is how v1.0 shipped a lab path inside a",
+    "checkpoint.' launchd does not inherit a shell, so a manifest in the repository",
+    "is the reliable form here, and it travels with the pin.",
+    "",
+    "Fetched by scripts/fetch_benchmarks.sh, which verifies the same pins."
+  ],
+  "suite": "v3",
+  "checkouts": {
+    "kev": {
+      "env": "KEV_ROOT",
+      "path": "benchmarks/kev",
+      "pin": "569ea449b1033c5aa8f149ec5e20d0c7a296d24a",
+      "url": "https://github.com/jaredpalmer/kev.git",
+      "licence": "Apache-2.0",
+      "benchmarks": ["kev_transfer_v4", "kev_hard_v1", "kev_documents_v1", "kev_devtools_v1"],
+      "weight": 0.212,
+      "note": "four benchmarks, the largest single block of the suite"
+    },
+    "nimble": {
+      "env": "NIMBLE_ROOT",
+      "path": "benchmarks/nimble",
+      "pin": "62076b4f2d365b5879dafcf7f6dd072a1fe76df7",
+      "url": "https://github.com/bespokelabsai/nimble.git",
+      "licence": "per subset: CC BY-SA 3.0/4.0, CC BY 4.0, CC0, MIT, PAWS free use",
+      "benchmarks": ["nimble_public", "nimble_holdout"],
+      "weight": 0.162,
+      "note": "nimble_public is the second-largest weight in the suite; its public subsets are rebuilt by sha, not taken from docs/"
+    },
+    "jevbench": {
+      "env": "JEVBENCH_ROOT",
+      "path": "benchmarks/jevbench",
+      "pin": "26eb72d4e0e60d8ace0adfc77a384063442561cd",
+      "url": "https://github.com/fstandhartinger/jevbench.git",
+      "licence": "MIT",
+      "benchmarks": ["jevbench_public"],
+      "weight": 0.049,
+      "note": "the pin is not a branch or tag tip, so it cannot be resolved with ls-remote; the history has to be walked"
+    },
+    "open_jev": {
+      "env": "OPENJEV_ROOT",
+      "path": null,
+      "pin": "10ad6888",
+      "url": "https://github.com/ZefanCai/Open-Jev-v1.1.git",
+      "licence": "CC0-1.0 / CC-BY-4.0",
+      "benchmarks": ["open_jev_ood"],
+      "weight": 0.032,
+      "note": "UNOBTAINABLE as of 2026-10-01: the repository does not resolve. Recorded so the gap is a decision on the record rather than a silence."
+    },
+    "procedural": {
+      "env": "TASKSOURCE_ROOT",
+      "path": null,
+      "pin": "b4f55bea",
+      "url": "https://github.com/tasksource/procedural-typed-decisions.git",
+      "licence": "Apache-2.0",
+      "benchmarks": ["procedural_test"],
+      "weight": 0.033,
+      "note": "UNOBTAINABLE as of 2026-10-01: the repository does not resolve."
+    },
+    "tasksource_jev": {
+      "env": "TASKSOURCE_JEV_ROOT",
+      "path": null,
+      "pin": "119a1645",
+      "url": "https://github.com/tasksource/tasksource-jev-typed-decisions.git",
+      "licence": "other (unstated)",
+      "benchmarks": ["tasksource_jev_test"],
+      "weight": 0.05,
+      "note": "UNOBTAINABLE at the pinned path as of 2026-10-01. This is a HELD-OUT benchmark upstream, scored once per release; this project holds out tasksource/tasksource at its own pin, which is a different repository and therefore not a substitute."
+    },
+    "semif": {
+      "env": "SEMIF_ROOT",
+      "path": null,
+      "pin": null,
+      "url": "https://github.com/TheoLeeCJ/SemIf.git",
+      "licence": "MIT",
+      "benchmarks": ["semif_external"],
+      "weight": 0.05,
+      "note": "UNOBTAINABLE, and upstream says so itself: its --list records 'TheoLeeCJ/SemIf, repo now private'. A HELD-OUT benchmark. The ceiling on suite fidelity is upstream's own, not ours."
+    },
+    "jev_style_panel": {
+      "env": "CHATDEV_ROOT",
+      "path": null,
+      "pin": "data_manifest revisions, seed 20260923",
+      "url": "https://github.com/chaoliangUNSW/ChatDev.git",
+      "licence": "per upstream (AG News, ANLI CC BY-NC 4.0, BoolQ CC BY-SA 3.0, emotion, Enron, HANS MIT, IMDB, GLUE)",
+      "benchmarks": ["jev_style_panel"],
+      "weight": 0.081,
+      "note": "UNOBTAINABLE as of 2026-10-01: chaoliangUNSW/ChatDev does not resolve. Second-largest gap, and the panel is decisions in Jev's own house style, so it is the one whose absence most changes what a suite number means."
+    }
+  }
+}
