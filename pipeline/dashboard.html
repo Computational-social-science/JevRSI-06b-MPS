@@ -284,6 +284,7 @@ function banner(d){
 
 function render(d){
   const h=d.health,pw=d.power,v=d.verdicts,cur=d.current_arm,ho=d.held_out||{};
+  const lg=d.lineage||{n_keep:0,n_discard:0,n_crash:0,series:[]};
   const live=h.arm_running?pill("arm running",'info')
     :(h.loop_installed?pill("idle",'quiet'):pill("loop down",'bad'));
 
@@ -291,15 +292,15 @@ function render(d){
    <div class="cell"><div class="k">arms</div>
      <div class="v">${d.n_arms_done}<span class="of">/${d.n_arms_total}</span></div>
      <div class="n">${d.progress_pct}% of the agenda</div></div>
-   <div class="cell"><div class="k">confirmed</div>
-     <div class="v ${v.kept?"good":"quiet"}">${v.kept||0}</div>
-     <div class="n">cleared every seed</div></div>
-   <div class="cell"><div class="k">unconfirmed</div>
-     <div class="v ${v.kept_pending_confirm?"warn":"quiet"}">${v.kept_pending_confirm||0}</div>
-     <div class="n">over bar, awaiting seed</div></div>
-   <div class="cell"><div class="k">negatives</div>
-     <div class="v">${v.rejected||0}</div>
-     <div class="n">${v.needs_repair||0} awaiting repair</div></div>
+   <div class="cell"><div class="k">survivors</div>
+     <div class="v ${lg.n_keep?"good":"quiet"}">${lg.n_keep||0}</div>
+     <div class="n">kept their checkpoint</div></div>
+   <div class="cell"><div class="k">discards</div>
+     <div class="v">${lg.n_discard||0}</div>
+     <div class="n">measured, did not win</div></div>
+   <div class="cell"><div class="k">crashes</div>
+     <div class="v ${lg.n_crash?"bad":"quiet"}">${lg.n_crash||0}</div>
+     <div class="n">no measurement</div></div>
    <div class="cell"><div class="k">noise floor</div>
      <div class="v ${pw&&pw.measured?"good":"warn"}">${pw?sgn(pw.paired_sd):"—"}</div>
      <div class="n">${pw?(pw.measured?pw.n_null_arms+" null arms":"FALLBACK, not measured"):"not measured"}</div></div>
@@ -312,6 +313,9 @@ function render(d){
    <div class="cell"><div class="k">held-out</div>
      <div class="v ${ho.spent?"warn":"good"}" style="font-size:var(--t-md)">${ho.spent?"spent":"intact"}</div>
      <div class="n">${ho.spent?"read once, consumed":"never read"}</div></div>
+   <div class="cell"><div class="k">weights held</div>
+     <div class="v ${lg.ckpt_gb>0.1?"":"quiet"}" style="font-size:var(--t-md)">${(lg.ckpt_gb||0).toFixed(2)}<span style="font-size:var(--t-sm)"> GB</span></div>
+     <div class="n">${lg.collectable_gb>0.01?`${lg.collectable_gb.toFixed(2)} GB collectable`:"only lineage"}</div></div>
   </div>`;
 
   const incons=d.inconsistent?`<div class="verdict bad" style="margin-bottom:var(--s3)">
@@ -401,7 +405,7 @@ function render(d){
   <div class="sig">
     <span>record <code>versions/current.md</code></span>
     <span>discarded <code>versions/DISCARDED.md</code></span>
-    <span>trajectory <code>state/trajectory.html</code></span>
+    <span>climb <code>state/trajectory.html</code></span>
     <span>doctor <code>state/doctor.json</code></span>
     <span>weights &amp; corpus via <code>${esc((d.sources&&d.sources.hf_endpoint)||"hf")}</code></span>
     </div>`;

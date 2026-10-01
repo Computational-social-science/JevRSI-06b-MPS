@@ -261,6 +261,36 @@ def main() -> int:
     f11 = find(F, "I11")
     check("I11 fires on a mid-search device change", not f11.ok, f11.detail[:60])
 
+    print("\nI13: only the surviving lineage keeps its weights")
+    import shutil as _sh
+    import tempfile as _tf
+    from pathlib import Path as _P
+    _ck = ROOT / "ckpt"
+    _probe = _ck / "_inv_probe_survivor"
+    _probe.mkdir(parents=True, exist_ok=True)
+    try:
+        (_probe / "w.bin").write_bytes(b"x" * 4096)
+        rows = [{"arm": "_inv_probe_survivor", "verdict": "not_confirmed",
+                 "contamination": "clean", "pooled_top1_candidate": 0.5,
+                 "pooled_top1_control": 0.46}]
+        F = run_isolated(lambda t: (
+            write(t / "prereg.jsonl", []), write(t / "arms.jsonl", rows)))
+        f13 = find(F, "I13")
+        check("I13 fires on a DISCARDED arm that still holds weights",
+              (not f13.ok) and f13.severity == "critical", f13.detail[:60])
+        check("... and names it", "_inv_probe_survivor" in " ".join(f13.evidence),
+              str(f13.evidence)[:90])
+
+        # The two cases it must NOT fire on. A guard that fires on a survivor is
+        # a guard that deletes the only model anybody can publish.
+        rows[0].update(verdict="kept", artifact="verified: 2000/2000 agree")
+        F = run_isolated(lambda t: (
+            write(t / "prereg.jsonl", []), write(t / "arms.jsonl", rows)))
+        check("I13 is quiet on a KEPT arm's weights", find(F, "I13").ok,
+              find(F, "I13").detail[:60])
+    finally:
+        _sh.rmtree(_probe, ignore_errors=True)
+
     print("\nI12: the cost rule, and the checker does not fire on itself")
     import invariants
     f12 = find(invariants.check_all(), "I12")

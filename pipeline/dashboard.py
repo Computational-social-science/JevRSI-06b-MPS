@@ -146,6 +146,21 @@ def collect() -> dict:
     except Exception as exc:
         sources = {"hf_endpoint": f"unknown ({type(exc).__name__})"}
 
+    # The climb, and what the weights cost. `lineage` is the module that
+    # distinguishes a surviving offspring from a discarded one, so the dashboard
+    # asks it rather than re-deriving survival from verdict strings — two
+    # versions of the same classification is two things to disagree.
+    try:
+        import lineage as _lin
+        lineage = _lin.series()
+        _c = _lin.collect(apply=False)
+        lineage["ckpt_gb"] = _c["freed_bytes"] / 1e9 + sum(
+            a.ckpt_bytes for a in _lin.lineage()) / 1e9
+        lineage["collectable_gb"] = _c["freed_gb"]
+    except Exception as exc:
+        lineage = {"series": [], "n_keep": 0, "n_discard": 0, "n_crash": 0,
+                   "error": f"{type(exc).__name__}: {exc}"}
+
     arms = []
     for r in arms_raw:
         p = prereg.get(r.get("arm"), {})
@@ -205,6 +220,7 @@ def collect() -> dict:
         "current_arm": current,
         "doctor": doc,
         "sources": sources,
+        "lineage": lineage,
         "progress_pct": round(progress, 1),
         "n_arms_done": len(arms),
         "n_arms_total": len(agenda.AGENDA),

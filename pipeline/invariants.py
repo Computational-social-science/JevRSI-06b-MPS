@@ -375,6 +375,50 @@ def check_all() -> list[Finding]:
                      repair=("run verify_ckpt, or mark the checkpoint as evidence"
                              if (unver or ambiguous) else "")))
 
+    # ---- I13 weights are lineage, not evidence
+    #
+    # Borrowed from autoresearch's keep/discard/crash distinction, and the reason
+    # it needs stating as an invariant rather than a convention is arithmetic: at
+    # one arm per ~100 minutes, a discarded offspring that keeps its weights
+    # costs ~1.7 GB per 100 minutes, unbounded, for a model that can never be
+    # published. That is not untidy; it is a leak in a 24/7 loop.
+    #
+    # The rule: an arm retains weights IFF it is the current survivor. A discard
+    # is a MEASUREMENT and lives in the record forever; the bytes buy nothing.
+    import json as _json
+    import shutil as _shutil
+    champ_arm = None
+    try:
+        champ_arm = _json.loads((STATE / "champion.json").read_text()).get("arm")
+    except (OSError, _json.JSONDecodeError):
+        pass
+    _in_flight = running_arm()
+    stale_ckpt, survivor_ckpt = [], []
+    for r_ in arms:
+        a_ = r_.get("arm")
+        if not a_ or not (ROOT / "ckpt" / str(a_)).is_dir():
+            continue
+        v_ = r_.get("verdict")
+        survived = (v_ == "kept" and str(r_.get("artifact", "")).startswith("verified"))
+        if survived or a_ == champ_arm or a_ == _in_flight:
+            survivor_ckpt.append(str(a_))
+        else:
+            stale_ckpt.append(f"{a_} ({v_}, {v_ and (sum(f.stat().st_size for f in (ROOT/'ckpt'/str(a_)).rglob('*') if f.is_file())/1e9):.2f} GB)")
+    held = sum(f.stat().st_size for f in (ROOT / "ckpt").rglob("*")
+               if f.is_file()) if (ROOT / "ckpt").is_dir() else 0
+    f13ok = not stale_ckpt
+    F.append(Finding("I13", "only the surviving lineage keeps its weights",
+                     ok=f13ok, severity="critical" if stale_ckpt else "info",
+                     detail=("a discarded offspring is a measurement, not a model; "
+                             "its bytes are a leak and a trap for whoever picks "
+                             "them up next" if stale_ckpt
+                             else f"{held/1e9:.2f} GB held, all of it lineage"),
+                     evidence=([f"discarded but retained: {', '.join(stale_ckpt)}"]
+                               if stale_ckpt else
+                               [f"survivor weights: {', '.join(survivor_ckpt) or 'none yet'}",
+                                f"ckpt total {held/1e9:.2f} GB"]),
+                     repair="python pipeline/lineage.py --apply"))
+
     # ---- I11 one kernel stack
     stacks = set()
     for r in arms:

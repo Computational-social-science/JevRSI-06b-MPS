@@ -185,7 +185,7 @@ def auditor_methodology() -> tuple[str, list[Finding]]:
 def auditor_integrity() -> tuple[str, list[Finding]]:
     """Were the guards applied?"""
     _, F = "integrity", invariants.check_all()
-    keep = {"I9", "I10", "I11", "I12"}
+    keep = {"I9", "I10", "I11", "I12", "I13"}
     return "integrity", [f for f in F if f.invariant in keep]
 
 

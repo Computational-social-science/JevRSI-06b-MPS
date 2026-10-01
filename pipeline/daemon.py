@@ -389,6 +389,23 @@ def main() -> int:
 
     # ONE record per arm, written after the verdict is final.
     append_record(res)
+
+    # COLLECT, immediately after recording. A discarded offspring is a
+    # measurement, and the measurement is now in the record forever; its weights
+    # are not. Doing this here rather than on a schedule is the point: at one arm
+    # per ~100 minutes an uncollected discard is ~1.7 GB per 100 minutes, and a
+    # scheduled collector is a collector that silently stops being installed.
+    # The collector refuses to touch the champion and refuses to touch an arm with
+    # a live runner, so running it here cannot destroy the only publishable model.
+    try:
+        import lineage as _lin
+        c = _lin.collect(apply=True)
+        if c["removed"]:
+            log(f"COLLECT   freed {c['freed_gb']:.2f} GB — {', '.join(c['removed'])}")
+            log(f"          the measurements stay; only the bytes went")
+    except Exception as exc:
+        log(f"COLLECT   failed: {type(exc).__name__}: {exc} "
+            f"(a leak, not a lost measurement)")
     _report(res, champ)
 
     # 6. MOVE THE BAR, only on a CONFIRMED keeper whose checkpoint reproduces

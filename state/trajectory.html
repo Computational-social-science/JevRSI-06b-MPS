@@ -1,36 +1,223 @@
-<!doctype html><meta charset="utf-8">
+<!doctype html>
+<meta charset="utf-8">
+<title>Trajectory</title>
 <style>
- body { font:14px/1.5 ui-sans-serif,system-ui,-apple-system,sans-serif; margin:0; padding:20px; }
- h1 { font-size:19px; margin:0 0 2px; }
- .sub { color:var(--muted-foreground); margin:0 0 18px; }
- .cards { display:flex; gap:10px; margin:0 0 18px; flex-wrap:wrap; }
- .card { border:1px solid var(--border); border-radius:8px; padding:9px 14px; background:var(--card); }
- .card b { font-size:20px; display:block; }
- .card span { color:var(--muted-foreground); font-size:11px; }
- table { border-collapse:collapse; width:100%; font-size:12px; }
- th,td { text-align:left; padding:7px 9px; border-bottom:1px solid var(--border); vertical-align:top; }
- th { color:var(--muted-foreground); font-weight:600; font-size:11px; text-transform:uppercase; }
- td.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
- td.chg,td.why { color:var(--muted-foreground); max-width:340px; }
- code { font-size:12px; }
- .ax { color:var(--muted-foreground); font-size:10px; text-transform:uppercase; }
- .v { color:#fff; border-radius:4px; padding:1px 7px; font-size:11px; white-space:nowrap; }
+  :root{
+    --bg:#ffffff; --fg:#16191d; --mut:#5c6570; --bd:#d9dde3; --grid:#eceef1;
+    --keep:#0f7a4d; --disc:#5c6570; --crash:#a32b1c; --bar:#a32b1c;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#121417; --fg:#e8eaed; --mut:#8b95a1; --bd:#2a2e34; --grid:#22262b;
+           --keep:#5cc48c; --disc:#8b95a1; --crash:#f08a76; --bar:#f08a76; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;padding:28px;background:var(--bg);color:var(--fg);
+       font:14px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+       -webkit-font-smoothing:antialiased; font-variant-numeric:tabular-nums}
+  h1{font-size:18px;font-weight:600;margin:0 0 3px;letter-spacing:-.01em}
+  h2{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;
+     color:var(--mut);margin:26px 0 10px}
+  .sub{font-size:12px;color:var(--mut);margin-bottom:22px;max-width:78ch}
+  .tally{display:flex;gap:1px;background:var(--bd);border:1px solid var(--bd);
+         border-radius:6px;overflow:hidden;max-width:560px;margin:0 0 20px}
+  .tally div{background:var(--bg);padding:10px 14px;flex:1}
+  .tally .n{font-size:21px;font-weight:600;line-height:1.1}
+  .tally .k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;
+            color:var(--mut);font-weight:600;margin-top:3px}
+  .n.keep{color:var(--keep)} .n.disc{color:var(--disc)} .n.crash{color:var(--crash)}
+  svg{display:block;width:100%;height:auto}
+  .axis{stroke:var(--bd);stroke-width:1}
+  .grid{stroke:var(--grid);stroke-width:1}
+  text{font-family:ui-sans-serif,system-ui,sans-serif}
+  .tick{font-size:10px;fill:var(--mut)}
+  .lab{font-size:10.5px;fill:var(--fg);font-weight:600}
+  .pt{stroke:var(--bg);stroke-width:1.5}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:11px;color:var(--mut);
+          align-items:center;margin-top:12px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:50%;
+            margin-right:6px;vertical-align:-1px}
+  table{width:100%;border-collapse:collapse;font-size:12px;max-width:920px}
+  th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);
+     text-align:left;font-weight:600;padding:4px 8px 6px;border-bottom:1px solid var(--bd)}
+  td{padding:6px 8px;border-bottom:1px solid var(--grid);vertical-align:top}
+  td.num{text-align:right;white-space:nowrap}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px}
+  .note{font-size:11px;color:var(--mut);margin-top:10px;max-width:82ch;line-height:1.6}
+  .empty{padding:40px 20px;text-align:center;border:1px dashed var(--bd);
+         border-radius:6px;color:var(--mut)}
 </style>
-<h1>RSI-Jev on Qwen3-0.6B — self-evolution trajectory</h1>
-<p class="sub">Every mark is one arm, preregistered before it ran.
-  The green line is the champion: the bar each arm had to clear.
-  0 kept, 0 published negatives,
-  0 needing repair, 0 errors
-  of 2 arms.</p>
-<div class="cards">
-  <div class="card"><b>2</b><span>arms run</span></div>
-  <div class="card"><b>2</b><span>preregistered</span></div>
-  <div class="card"><b>0</b><span>kept</span></div>
-  <div class="card"><b>0</b><span>published negatives</span></div>
-  <div class="card"><b>0</b><span>champion changes</span></div>
-</div>
-<p><span class="v" style="background:#2f9e5e">kept (confirmed on a fresh seed)</span> <span class="v" style="background:#4a9e7a">over the bar, unconfirmed</span> <span class="v" style="background:#8a6a2e">did not survive a fresh seed</span> <span class="v" style="background:#b4442e">published negative</span> <span class="v" style="background:#c98a1b">needs repair</span> <span class="v" style="background:#8a8a8a">error</span></p>
-<svg viewBox="0 0 1100 340" width="100%" role="img" aria-label="trajectory"><line x1="46" y1="294.0" x2="1054" y2="294.0" stroke="var(--border)" stroke-width="1"/><text x="38" y="298.0" text-anchor="end" font-size="11" fill="var(--muted-foreground)">0.505</text><line x1="46" y1="232.0" x2="1054" y2="232.0" stroke="var(--border)" stroke-width="1"/><text x="38" y="236.0" text-anchor="end" font-size="11" fill="var(--muted-foreground)">0.512</text><line x1="46" y1="170.0" x2="1054" y2="170.0" stroke="var(--border)" stroke-width="1"/><text x="38" y="174.0" text-anchor="end" font-size="11" fill="var(--muted-foreground)">0.520</text><line x1="46" y1="108.0" x2="1054" y2="108.0" stroke="var(--border)" stroke-width="1"/><text x="38" y="112.0" text-anchor="end" font-size="11" fill="var(--muted-foreground)">0.527</text><line x1="46" y1="46.0" x2="1054" y2="46.0" stroke="var(--border)" stroke-width="1"/><text x="38" y="50.0" text-anchor="end" font-size="11" fill="var(--muted-foreground)">0.534</text><path d="M46.0,74.6 L1054.0,74.6" fill="none" stroke="#2f9e5e" stroke-width="2.5"/><circle cx="46.0" cy="74.6" r="5" fill="#4a9e7a" stroke="var(--card)" stroke-width="1.5"><title>null_floor — 0.5310 (kept_pending_confirm)</title></circle><text x="46.0" y="310" text-anchor="middle" font-size="10" fill="var(--muted-foreground)" transform="rotate(30 46.0 310)">null_floor</text><circle cx="1054.0" cy="265.4" r="5" fill="#8a6a2e" stroke="var(--card)" stroke-width="1.5"><title>confirm__null_floor — 0.5080 (not_confirmed)</title></circle><text x="1054.0" y="310" text-anchor="middle" font-size="10" fill="var(--muted-foreground)" transform="rotate(30 1054.0 310)">confirm__null_floor</text><line x1="46" y1="294" x2="1054" y2="294" stroke="var(--border)" stroke-width="1"/></svg>
-<table><thead><tr><th>arm</th><th>what changed</th><th>control</th><th>candidate</th>
-<th>delta</th><th>expected</th><th>verdict</th><th>why</th></tr></thead>
-<tbody><tr><td><code>null_floor</code><br><span class="ax">training</span></td><td class="chg">NOTHING: the champion spec, run again. A null arm, to measure the noise floor the bar is set against.</td><td class="num">0.4645</td><td class="num">0.5310</td><td class="num">—</td><td class="num">+0.0000</td><td><span class="v" style="background:#4a9e7a">over the bar, unconfirmed</span></td><td class="why">cleared the bar; awaiting a fresh-seed confirmation</td></tr><tr><td><code>confirm__null_floor</code><br><span class="ax">training</span></td><td class="chg">confirmation of null_floor on fresh seed 9001: identical recipe, the one number it was not selected on</td><td class="num">0.4645</td><td class="num">0.5080</td><td class="num">—</td><td class="num">+0.0665</td><td><span class="v" style="background:#8a6a2e">did not survive a fresh seed</span></td><td class="why">confirmation of null_floor FAILED: this seed reached +0.0435 against a bar of +0.0060. The arm cleared the bar on the run it was selected on and did not on a seed it was not, which is seed sensitivity and not an effect. null_floor does not take the crown.</td></tr></tbody></table>
+<h1>The climb</h1>
+<div class="sub">The champion over the arm sequence. The staircase rises only where an
+offspring <b>survived</b>, and it cannot fall — an arm that clears the bar is strictly
+better than the champion by construction, so a search that loses ground has a bug rather
+than a bad week. Every arm is drawn too: a <b>discard</b> is a measurement, not an absence
+(it ran, and the number said it was not better than its parent), and a <b>crash</b> is
+the absence of a measurement, drawn at the floor because scoring it zero would corrupt
+the axis.</div>
+<div id="app"></div>
+<script>
+const DATA = {"series": [{"arm": "null_floor", "role": "", "delta": 0.0665, "keep": false, "discard": true, "crash": false, "confirmations": [{"arm": "confirm__null_floor", "delta": 0.04349999999999998, "keep": false}]}], "n_keep": 0, "n_discard": 1, "n_crash": 0, "n_arms": 1, "start": 0.0665, "top": 0.0665, "ckpt_gb": 0.0, "bar": 0.02, "generated_h": "2026-10-01 16:16:22"};
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c =>
+  ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const sgn = v => (typeof v === "number" && isFinite(v)) ? (v>=0?"+":"")+v.toFixed(4) : "—";
+
+function figure(){
+  const s = DATA.series;
+  const scored = s.filter(r => typeof r.delta === "number" && r.delta !== null);
+  if (!scored.length) return `<div class="empty"><b>No arm has been scored yet.</b>
+    <div class="note" style="margin:8px auto 0">The four calibration replicas run first —
+    their spread is the noise floor every later arm is judged against, so there is nothing
+    to plot until it exists.</div></div>`;
+
+  const W = 980, H = 340, P = {l:56, r:20, t:16, b:74};
+  const real = scored.map(r => r.delta);
+  let lo = Math.min.apply(null, real.concat([0]));
+  let hi = Math.max.apply(null, real.concat([0]));
+  const pad = Math.max((hi - lo) * 0.18, 0.004);
+  lo -= pad; hi += pad;
+  const floor = lo - pad * 1.4;
+
+  const all = s.map((r, i) => ({ r: r, i: i }));
+  const n = all.length;
+  const X = i => P.l + (n < 2 ? 0 : i * (W - P.l - P.r) / (n - 1));
+  const Y = v => (H - P.b) - ((v - floor) / (hi - floor)) * (H - P.t - P.b);
+
+  let g = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Trajectory: keeps, discards and crashes by arm">`;
+  for (let k = 0; k <= 4; k++){
+    const v = floor + (hi - floor) * k / 4, y = Y(v);
+    g += `<line class="grid" x1="${P.l}" y1="${y.toFixed(1)}" x2="${W-P.r}" y2="${y.toFixed(1)}"/>`;
+    g += `<text class="tick" x="${P.l-8}" y="${(y+3.4).toFixed(1)}" text-anchor="end">${v.toFixed(3)}</text>`;
+  }
+  if (DATA.bar != null){
+    const by = Y(DATA.bar);
+    g += `<line x1="${P.l}" y1="${by.toFixed(1)}" x2="${W-P.r}" y2="${by.toFixed(1)}"
+           stroke="var(--bar)" stroke-width="1.5" stroke-dasharray="5 3"/>`;
+    g += `<text class="tick" x="${P.l+5}" y="${(by-5).toFixed(1)}" style="fill:var(--bar)">bar +${DATA.bar.toFixed(4)}</text>`;
+  }
+  if (lo <= 0 && hi >= 0){
+    const z = Y(0);
+    g += `<line x1="${P.l}" y1="${z.toFixed(1)}" x2="${W-P.r}" y2="${z.toFixed(1)}"
+           stroke="var(--mut)" stroke-width="1" stroke-dasharray="2 3" opacity=".5"/>`;
+    g += `<text class="tick" x="${W-P.r}" y="${(z-5).toFixed(1)}" text-anchor="end">no change vs control</text>`;
+  }
+
+  // THE CLIMB. A staircase through the champion, rising ONLY at a keep, and
+  // therefore incapable of descending. That is not a drawing convention: it is
+  // `clearsBar_implies_strictly_better` from formal/Gate.lean, proved for an
+  // arbitrary ordered group. An arm that clears the bar is strictly better than
+  // the champion, because the bar is `champion + floor` with `floor > 0`.
+  //
+  // Drawn as a staircase rather than a smooth best-so-far line, because the flat
+  // stretches ARE the result: a plateau is the search stuck at that level for
+  // that many arms, and a smoothed line would hide exactly that.
+  let best = null;
+  const steps = [];      // [x, y, arm] at each change of level
+  let level = null, levelArm = null, flatFrom = 0;
+  all.forEach(o => {
+    const d = o.r.delta;
+    if (o.r.keep && typeof d === "number" && (best === null || d > best)) {
+      if (level !== null) steps.push([X(flatFrom), level, levelArm, o.i - flatFrom]);
+      best = d; level = d; levelArm = o.r.arm; flatFrom = o.i;
+    }
+  });
+  if (level !== null) steps.push([X(flatFrom), level, levelArm, all.length - flatFrom]);
+  else if (steps.length === 0 && scored.length) {
+    // No survivor yet: the climb has not started, and saying so is the point.
+    best = Math.max.apply(null, scored.map(r => r.delta));
+  }
+
+  if (steps.length){
+    // Filled band under the climb, so the accumulated height reads as a hill.
+    let d = `M ${X(0).toFixed(1)} ${(H-P.b).toFixed(1)}`;
+    steps.forEach((st, k) => {
+      d += ` L ${st[0].toFixed(1)} ${Y(st[1]).toFixed(1)}`;
+      d += ` L ${X(all.length-1).toFixed(1)} ${Y(st[1]).toFixed(1)}`;
+      if (k < steps.length-1) d += ` L ${X(all.length-1).toFixed(1)} ${Y(steps[k+1][1]).toFixed(1)}`;
+    });
+    d += ` L ${X(all.length-1).toFixed(1)} ${(H-P.b).toFixed(1)} Z`;
+    g += `<path d="${d}" fill="var(--keep)" opacity="0.10"/>`;
+    let line = `M ${steps[0][0].toFixed(1)} ${Y(steps[0][1]).toFixed(1)}`;
+    steps.forEach((st, k) => {
+      line += ` L ${X(all.length-1).toFixed(1)} ${Y(st[1]).toFixed(1)}`;
+      if (k < steps.length-1) line += ` L ${X(all.length-1).toFixed(1)} ${Y(steps[k+1][1]).toFixed(1)}`;
+    });
+    g += `<path d="${line}" fill="none" stroke="var(--keep)" stroke-width="2.5"
+           stroke-linejoin="round"/>`;
+    // Label each rise with the arm that caused it, and each plateau with how
+    // long it lasted — the plateau length is the most informative number here.
+    steps.forEach(st => {
+      if (st[3] > 1) g += `<text class="tick" x="${(X(all.length-1)).toFixed(1)}"
+          y="${(Y(st[1])-7).toFixed(1)}" text-anchor="end">flat for ${st[3]} arm${st[3]===1?"":"s"}</text>`;
+    });
+  }
+
+  all.forEach(o => {
+    const r = o.r;
+    const crash = r.crash || typeof r.delta !== "number";
+    const y = crash ? Y(floor) : Y(r.delta);
+    const col = r.keep ? "var(--keep)" : (crash ? "var(--crash)" : "var(--disc)");
+    g += `<circle class="pt" cx="${X(o.i).toFixed(1)}" cy="${y.toFixed(1)}" r="${r.keep ? 6.5 : 5}" fill="${col}">` +
+         `<title>${esc(r.arm)} — ${crash ? "crash: no measurement" : sgn(r.delta)} (${r.keep ? "keep" : "discard"})</title></circle>`;
+    const lbl = r.arm.length > 16 ? r.arm.slice(0, 15) + "…" : r.arm;
+    g += `<text class="tick" x="${X(o.i).toFixed(1)}" y="${H-P.b+14}" text-anchor="end" ` +
+         `transform="rotate(-45 ${X(o.i).toFixed(1)} ${H-P.b+14})">${esc(lbl)}</text>`;
+  });
+
+  g += `<line class="axis" x1="${P.l}" y1="${H-P.b}" x2="${W-P.r}" y2="${H-P.b}"/>`;
+  g += `<text class="lab" x="${P.l}" y="${H-22}">arms, in the order they ran</text>`;
+  if (n) g += `<text class="lab" x="${W-P.r}" y="${H-22}" text-anchor="end">${n} arm${n===1?"":"s"}</text>`;
+  g += `<text class="lab" x="4" y="${P.t+2}">Δ top-1 vs the control</text></svg>`;
+
+  return g + `<div class="legend">
+      <span><i style="background:var(--keep)"></i>keep — a surviving offspring; the climb rises</span>
+      <span><i style="background:var(--disc)"></i>discard — ran, measured, did not beat the parent</span>
+      <span><i style="background:var(--crash)"></i>crash — no measurement</span>
+      <span><i style="background:var(--keep);border-radius:0;height:3px;width:18px;vertical-align:3px"></i>the climb: the champion, and it cannot descend</span>
+    </div>
+    <p class="note">The climb cannot go down, and that is a proved property rather than a
+    drawing choice: an arm that clears the bar is strictly better than the champion, because the
+    bar is <code>champion + floor</code> with <code>floor &gt; 0</code>
+    (<code>formal/Gate.lean</code>, <code>clearsBar_implies_strictly_better</code>, proved for an
+    arbitrary ordered group). A flat stretch is therefore the search genuinely stuck at that level,
+    which is why each plateau is labelled with its length.</p>`;
+}
+
+function rows(){
+  return DATA.series.map((r, i) => {
+    const conf = (r.confirmations || []).map(c =>
+      `<div class="note" style="margin:2px 0 0">${c.keep ? "confirmed" : "failed"} on a fresh seed: ${esc(c.arm)} ${sgn(c.delta)}</div>`).join("");
+    return `<tr>
+      <td class="num">${i+1}</td>
+      <td><code>${esc(r.arm)}</code>${conf}</td>
+      <td>${r.role ? `<span class="note" style="margin:0">${esc(r.role)}</span>` : ""}</td>
+      <td class="num">${(r.crash || typeof r.delta !== "number") ? "—" : sgn(r.delta)}</td>
+      <td>${r.keep ? '<b style="color:var(--keep)">keep</b>'
+                 : (r.crash ? '<span style="color:var(--crash)">crash</span>'
+                            : '<span style="color:var(--disc)">discard</span>')}</td>
+    </tr>`;
+  }).join("");
+}
+
+// The headline numbers are about the CLIMB, not the attempt count. "How high did
+// it get, and how much did it cost" is the question; "how many arms ran" is not.
+const climbed = DATA.series.filter(r => r.keep);
+const gain = (DATA.start != null && DATA.top != null) ? DATA.top - DATA.start : null;
+$("#app").innerHTML =
+  `<div class="tally">
+     <div><div class="n keep">${DATA.n_keep}</div><div class="k">survivors</div></div>
+     <div><div class="n">${gain == null ? "—" : (gain>=0?"+":"") + gain.toFixed(4)}</div><div class="k">climb gained</div></div>
+     <div><div class="n">${DATA.n_arms ? (DATA.n_keep/DATA.n_arms*100).toFixed(0) : "0"}<span style="font-size:12px">%</span></div><div class="k">arms that survived</div></div>
+     <div><div class="n disc">${DATA.n_discard}</div><div class="k">discards</div></div>
+     <div><div class="n crash">${DATA.n_crash}</div><div class="k">crashes</div></div>
+     <div><div class="n">${DATA.ckpt_gb.toFixed(2)}<span style="font-size:12px"> GB</span></div><div class="k">weights held</div></div>
+   </div>
+   <h2>Climb</h2>${figure()}
+   <h2>Every arm</h2>
+   <table><thead><tr><th class="num">#</th><th>arm</th><th>role</th>
+     <th class="num">Δ vs control</th><th>outcome</th></tr></thead><tbody>${rows()}</tbody></table>
+   <p class="note">Weights are lineage, not evidence. An arm keeps its checkpoint only while it is
+   the surviving offspring; a discarded arm's measurement stays in the record permanently and its
+   bytes are collected, so the loop cannot leak ~1.7 GB per arm for models that can never be
+   published. Generated ${esc(DATA.generated_h)}.</p>`;
+</script>
