@@ -1,8 +1,8 @@
 {
-  "verdict": "healthy",
-  "ok": true,
-  "when": 1790851948.355,
-  "when_h": "2026-10-01 18:52:28",
+  "verdict": "wrong",
+  "ok": false,
+  "when": 1790852534.906538,
+  "when_h": "2026-10-01 19:02:14",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "this diagnosis is running inside the watchdog (pid 17522)"
+            "this diagnosis is running inside the watchdog (pid 21114)"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 61s ago"
+            "last arm-log write 648s ago"
           ],
           "repair": ""
         }
@@ -332,18 +332,20 @@
     },
     "reproducible": {
       "n": 2,
-      "ok": 2,
-      "critical": [],
+      "ok": 1,
+      "critical": [
+        "C2 the RUNNING loop uses the science currently on disk"
+      ],
       "major": [],
       "findings": [
         {
           "invariant": "C2",
           "title": "the RUNNING loop uses the science currently on disk",
-          "ok": true,
-          "severity": "info",
-          "detail": "every running process postdates power.py and loop.py",
+          "ok": false,
+          "severity": "critical",
+          "detail": "the loop is gating with modules older than the ones on disk: pipeline/loop.py edited after daemon.py (pid 16901) started; pipeline/loop.py edited after run_one.py (pid 16955) started; pipeline/loop.py edited after dashboard.py (pid 17975) started",
           "evidence": [],
-          "repair": ""
+          "repair": "restart the daemon so the corrected gate takes effect; the arm in flight is left to finish"
         },
         {
           "invariant": "C1",
@@ -359,18 +361,29 @@
       ]
     }
   },
-  "criticals": [],
+  "criticals": [
+    "reproducible/C2"
+  ],
   "majors": [],
   "minors": [],
-  "diagnosis": "all auditors agree: the loop is running and the science it is running is the science we said we would run",
+  "diagnosis": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.  HALTED: the loop will not propose another arm until a human gives a reason. The arm in flight is left to finish.",
   "halt": {
-    "active": false,
-    "reason": "",
-    "since": 0.0,
-    "since_h": "",
-    "findings": [],
+    "active": true,
+    "reason": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
+    "since": 1790852534.907145,
+    "since_h": "2026-10-01 19:02:14",
+    "findings": [
+      "reproducible/C2"
+    ],
     "unreadable": false
   },
-  "repairs": [],
+  "repairs": [
+    {
+      "finding": "reproducible/C2",
+      "action": "restart the daemon so the corrected gate takes effect; the arm in flight is left to finish",
+      "safe_unattended": true,
+      "detail": "the loop is gating with modules older than the ones on disk: pipeline/loop.py edited after daemon.py (pid 16901) started; pipeline/loop.py edited after run_one.py (pid 16955) started; pipeline/loop.py edited after dashboard.py (pid 17975) started"
+    }
+  ],
   "needs_human": false
 }

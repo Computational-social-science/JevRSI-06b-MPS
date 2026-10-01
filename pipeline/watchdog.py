@@ -128,6 +128,7 @@ def main() -> int:
     a = ap.parse_args()
 
     last_repair = 0.0
+    last_stale_restart = 0.0
     while True:
         # The doctor runs FIRST and outranks everything below. The other checks
         # ask "is it up"; the doctor asks "is it up AND running the science we
@@ -150,6 +151,34 @@ def main() -> int:
                         "and will not stop on its own. NOT auto-repaired -- a "
                         "scientific violation must be read by a person before "
                         "anything is changed.")
+            # ONE exception to "a person decides", and it is not a judgement call
+            # about the science: a daemon that is running code older than the code
+            # on disk (C2) is a daemon whose gate is provably not the gate in the
+            # repository. The correction is already written down and committed --
+            # there is nothing to decide, only a process to replace.
+            #
+            # The gate is `no arm in flight`, and it is not optional. The daemon is
+            # the PARENT of the arm, and the daemon is what appends the result to
+            # `records/arms.jsonl`; killing it mid-arm leaves the measurement
+            # written to `records/<arm>/result.json` with no row, which is the
+            # unresolved-preregistration state (provenance/I2) all over again. So
+            # this waits, and says that it is waiting. Without it the failure is
+            # terminal rather than loud: the halt stops the loop proposing, the
+            # stale daemon never picks up the fix, and nothing ever restarts it.
+            if rep.verdict == "wrong" and "reproducible/C2" in (rep.criticals or []):
+                if doctor.arm_pids():
+                    log("          C2: a corrected module is on disk and the "
+                        "running daemon predates it. NOT restarting while an arm is "
+                        "in flight -- the daemon writes that arm's record, and "
+                        "killing it would orphan the measurement. It will be "
+                        "restarted the moment the arm lands.")
+                elif time.time() - last_stale_restart > REPAIR_BACKOFF_S:
+                    last_stale_restart = time.time()
+                    subprocess.run(["launchctl", "kickstart", "-k",
+                                    f"gui/{os.getuid()}/com.research.rsijev"],
+                                   capture_output=True, text=True)
+                    log("          C2: no arm in flight; restarted the daemon so it "
+                        "runs the science on disk")
         except Exception as exc:
             log(f"DOCTOR    could not run: {type(exc).__name__}: {exc}")
 

@@ -26,6 +26,7 @@ readable afterwards rather than reconstructed from console output.
 from __future__ import annotations
 
 import json
+import os
 import time
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -37,7 +38,13 @@ ROOT = Path(__file__).resolve().parent.parent
 STATE = ROOT / "state"
 RECORDS = ROOT / "records"
 CKPT = ROOT / "ckpt"
-LOGS = ROOT / "logs"
+# `logs/` is the operational record of a 24/7 loop, so it is also the one place a
+# TEST can quietly corrupt: `test_halt.py` runs the real daemon with --dry-run to
+# prove it refuses to propose while halted, and that subprocess appended
+# "HALT not proposing: planted for the test" to the live daemon.log -- on
+# 2026-10-01 at 18:56, which reads in `status.py` exactly like a halted loop.
+# The halt FILE is already redirected by the test (RSIJEV_HALT); the log was not.
+LOGS = Path(os.environ.get("RSIJEV_LOGS") or (ROOT / "logs"))
 for _d in (STATE, RECORDS, CKPT, LOGS):
     _d.mkdir(parents=True, exist_ok=True)
 

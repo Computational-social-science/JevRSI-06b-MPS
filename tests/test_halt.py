@@ -76,14 +76,19 @@ def main() -> int:
     # Run the REAL daemon in --dry-run. If the halt gate is not wired in, this
     # proposes an arm and says so; if it is, it refuses.
     halt, tmp, saved = isolated()
-    real_halt = ROOT / "state" / "HALT.json"
     try:
         halt.raise_halt("planted for the test", ["provenance/I4"])
+        # The daemon's LOG directory goes with it. The test proves the gate is
+        # wired in by running the REAL daemon binary, and that subprocess used to
+        # append "HALT not proposing: planted for the test" to the live
+        # `logs/daemon.log` -- which `status.py` then reads as a halted loop. The
+        # halt file was already redirected; the log was the gap, and it is the
+        # same class of bug twice: a test that writes into the live 24/7 record.
         r = subprocess.run(
             [sys.executable, str(ROOT / "pipeline" / "daemon.py"), "--dry-run"],
             cwd=ROOT, capture_output=True, text=True, timeout=180,
             env={"PATH": "/usr/bin:/bin", "HOME": str(Path.home()),
-                 "RSIJEV_HALT": str(halt.HALT)})
+                 "RSIJEV_HALT": str(halt.HALT), "RSIJEV_LOGS": str(tmp)})
         out = r.stdout + r.stderr
         check("the daemon refuses while halted", "HALT" in out, f"rc={r.returncode}")
         check("... and does NOT propose an arm", "PROPOSED" not in out,
