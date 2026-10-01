@@ -1,6 +1,6 @@
 # RSI-Jev on Qwen3-0.6B — research record
 
-*Generated 2026-10-01 15:48:17 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
+*Generated 2026-10-01 18:47:50 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
 *`state/champions.jsonl`. Not maintained by hand: it cannot drift from the*
 *data, because it is a projection of the data.*
 
@@ -54,25 +54,24 @@ pooled with a CUDA one.
 
 ## 4. Power — what this setup could have seen
 
-**1 null arms so far.** Until there are at least two, the noise floor is
-not measured and the fallback is upstream's per-seed sd of 0.011, taken at the conservative
-end. This is stated rather than hidden because it is a weaker claim.
+Measured from **3 null arms** (arms identical to the control, so their spread is
+the noise floor): sd = **0.0253**.
 
 | seeds | minimum detectable effect |
 |---|---|
-| 2 | 0.0193 |
-| 3 | 0.0158 |
-| 4 | 0.0137 |
-| 5 | 0.0122 |
-| 6 | 0.0112 |
-| 7 | 0.0103 |
-| 8 | 0.0097 |
+| 2 | 0.0445 |
+| 3 | 0.0363 |
+| 4 | 0.0314 |
+| 5 | 0.0281 |
+| 6 | 0.0257 |
+| 7 | 0.0238 |
+| 8 | 0.0222 |
 
-**Bar in force: +0.0200.**
+**Bar in force: +0.1043.**
 
-Of the effects upstream reports, this design could detect: upstream_data_train_split, upstream_lower_layers_slow.
+Of the effects upstream reports, this design could detect: upstream_data_train_split.
 
-It could **not** detect: upstream_replay_15pct, upstream_mlp_combine, upstream_wider_coverage, upstream_best_of_24_arms, upstream_data_axis_worst.
+It could **not** detect: upstream_replay_15pct, upstream_lower_layers_slow, upstream_mlp_combine, upstream_wider_coverage, upstream_best_of_24_arms, upstream_data_axis_worst.
 
 This is the single most important number in this document. A null verdict on an arm whose
 expected effect is below the MDE means *no effect we could see*, not *no effect*, and the
@@ -93,24 +92,27 @@ Upstream spent 24 arms learning that. The first arm here is a null arm for exact
 
 ### The agenda, ordered by what this design can resolve
 
-Minimum detectable effect at the planned budget: **0.0200**. An arm's *role* is decided from its expected effect against that number, **before** it runs — never from what it produced. That is what stops a null from being read as a refutation when the design could not have seen one.
+Minimum detectable effect at the planned budget: **0.1043**. An arm's *role* is decided from its expected effect against that number, **before** it runs — never from what it produced. That is what stops a null from being read as a refutation when the design could not have seen one.
 
 | role | meaning | seed budget | arms |
 |---|---|---|---|
 | **calibration** | replicas of the champion recipe; their SPREAD is the noise floor the bar is set at | 1 | `null_floor`, `null1`, `null2`, `null3` |
-| **decisive** | expected effect above the detectable minimum — a null here is informative | 3 | `champion_base`, `train_lower_layers_soft` |
-| **exploratory** | expected effect below it — can only ever confirm, never refute | 1 | 12 arms |
+| **decisive** | expected effect above the detectable minimum — a null here is informative | 3 | `champion_base` |
+| **exploratory** | expected effect below it — can only ever confirm, never refute | 1 | 13 arms |
 
 The order is derived from the power analysis, not hand-written, so a change in the measured floor re-orders the queue instead of quietly making it wrong. The seed budget follows the role: a `decisive` arm is the only one where more seeds change what is knowable, so it is the only one they are spent on.
 
 ## 6. Results
 
-2 arms: **0 kept**, 0 published negatives, 0 needing repair, 0 errors.
+3 arms: **0 kept**, 0 published negatives, 1 needing repair, 0 errors.
 
-| arm | role | Δ vs control | expected | contamination | verdict |
-|---|---|---|---|---|---|
-| `null_floor` | — | +0.0665 | +0.0000 | verified retroactively: clean: 7414 tr | kept_pending_confirm |
-| `confirm__null_floor` | exploratory | +0.0435 | +0.0665 | clean | not_confirmed |
+| arm | role | Δ vs control | expected | bar | contamination | verdict |
+|---|---|---|---|---|---|---|
+| `null_floor` | — | +0.0665 | +0.0000 | ? | verified retroactively: clean: 7414 tr | kept_pending_confirm |
+| `confirm__null_floor` | exploratory | +0.0435 | +0.0665 | ? | clean | not_confirmed *(underpowered)* |
+| `null1` | calibration | +0.0940 | +0.0000 | ? | clean | needs_repair |
+
+**3 row(s) predate the `bar` column** (`null_floor`, `confirm__null_floor`, `null1`): the record cannot say which bar decided them. Treat those verdicts as unverified against any bar.
 
 ## 7. Reference points
 

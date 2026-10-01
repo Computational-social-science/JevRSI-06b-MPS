@@ -75,6 +75,27 @@ def main() -> int:
                         prediction=h.prediction).to_json()
         print(f"  [warn] no prereg found for {a.arm}; using the agenda's text")
 
+    # THE SEED IS CHECKED, NOT TRUSTED. The promise is the preregistration on disk
+    # (falling back to the agenda for rows written before the seed was pinned);
+    # the spec is the thing about to be executed. If they disagree, this arm is
+    # not the arm that was predicted, and an hour of compute would produce a
+    # number that cannot be compared with anything — including the floor it is
+    # supposed to help measure.
+    #
+    # This is not hypothetical. `null2` ran at seed 17 while 37 was written down,
+    # and returned rows bit-identical to the seed-17 `null_floor` beside it: two
+    # arm names, one measurement, sitting in `records/` where a reader would take
+    # them for two points of a spread. The refusal costs a second; the duplicate
+    # cost a day of the record's credibility.
+    promised = prereg.get("seed")
+    if promised is None:
+        promised = (h.spec or {}).get("seed")
+    if promised is not None and spec.get("seed") != promised:
+        print(f"REFUSING {a.arm}: the prediction names seed {promised} but "
+              f"{a.spec} says {spec.get('seed')!r}. Refusing rather than "
+              f"measuring the wrong thing.", file=sys.stderr)
+        return 1
+
     res = run_arm(
         arm=a.arm, spec=spec, prereg=Prereg(**prereg),
         corpus_dir=Path(a.corpus), model_id=a.model,

@@ -84,6 +84,56 @@ class Hypothesis:
 # published -- upstream's most valuable output is a measured negative -- but they
 # cannot be mistaken for a refutation, and the loop does not spend its seed
 # budget on them.
+
+
+def is_null_series(arm_name: str) -> bool:
+    """Is this arm one of the champion-recipe replicas the noise floor is measured from?
+
+    ONE definition, shared by the proposer, by the daemon that re-derives the
+    power analysis, and by the guard tests. When the producer and the checker each
+    decide "is this a null?" on their own they will eventually disagree, and that
+    failure is silent: the floor stops matching the series it claims to come from
+    and nobody is told. Confirmation runs of a null (`confirm__null_*`) ARE part of
+    the series — they are the same recipe on a seed it was not selected on, which
+    is precisely the spread we want.
+
+    Name-based on purpose. The alternative — keying on the stored `role` field —
+    was tried and is wrong twice over: the first `null_floor` record predates the
+    role field and has none, and `confirm__null_floor` was recorded as
+    `exploratory`, so a role-keyed floor would have silently dropped two of the
+    three points that actually measured it.
+    """
+    name = arm_name.split("__", 1)[-1] if arm_name.startswith("confirm__") else arm_name
+    return name.startswith("null")
+
+
+def null_deltas(records) -> list[float]:
+    """The deltas of the null series, and of nothing else.
+
+    This used to live inline in the daemon, as a loop over every recorded arm.
+    That is where the bar became a ratchet: the first hypothesis arm to land was
+    fed into `analyse` as though it were noise, the floor inflated to include its
+    effect, the bar rose, and every later arm was judged against a threshold the
+    search had built out of its own results. A floor measured partly from the
+    things it exists to detect is not a floor.
+
+    It is a named function rather than daemon code because a rule that cannot be
+    called cannot be tested, and a rule that cannot be tested is a rule that will
+    drift the next time someone edits the loop that used to hold it.
+
+    Records missing either number are skipped rather than defaulted: a delta
+    invented from a missing control is not a measurement.
+    """
+    out: list[float] = []
+    for r in records or ():
+        if not is_null_series(str(r.get("arm", ""))):
+            continue
+        c, k = r.get("pooled_top1_candidate"), r.get("pooled_top1_control")
+        if c is not None and k is not None:
+            out.append(c - k)
+    return out
+
+
 def _role_for(arm_name: str, expected: float) -> str:
     """Decided by the design, before any run, and never by the outcome.
 
@@ -99,7 +149,7 @@ def _role_for(arm_name: str, expected: float) -> str:
     expected effect compares with the detectable minimum.
     """
     from loop import BAR
-    if arm_name.startswith("null"):
+    if is_null_series(arm_name):
         return "calibration"
     import power
     p = power.load()
@@ -459,4 +509,5 @@ def next_prereg(h: Hypothesis, champion: dict | None) -> Prereg:
         delta_floor=floor, direction=h.direction, null_floor_vs=base,
         expected_effect=h.expected_effect, source=h.source,
         role=h.role, seeds_required=_c.seeds_for(h.role),
+        seed=(h.spec or {}).get("seed"),
     )

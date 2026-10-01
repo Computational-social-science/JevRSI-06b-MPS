@@ -57,3 +57,10 @@
 {"when": 1790848661.412483, "when_h": "2026-10-01 17:57:41", "verdict": "wrong", "ok": false, "criticals": [], "majors": ["reproducible/C1"]}
 {"when": 1790848699.444304, "when_h": "2026-10-01 17:58:19", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
 {"when": 1790849004.8727622, "when_h": "2026-10-01 18:03:24", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790849326.3268301, "when_h": "2026-10-01 18:08:46", "verdict": "wrong", "ok": false, "criticals": ["integrity/I13", "adversary/A4"], "majors": []}
+{"when": 1790849495.932653, "when_h": "2026-10-01 18:11:35", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790850352.7864928, "when_h": "2026-10-01 18:25:52", "verdict": "wrong", "ok": false, "criticals": ["integrity/I13", "adversary/A4"], "majors": ["vitals/V4", "provenance/I2"]}
+{"when": 1790851260.190421, "when_h": "2026-10-01 18:41:00", "verdict": "wrong", "ok": false, "criticals": ["integrity/I13", "adversary/A4"], "majors": ["provenance/I2"]}
+{"when": 1790851431.5086348, "when_h": "2026-10-01 18:43:51", "verdict": "wrong", "ok": false, "criticals": [], "majors": ["provenance/I2"]}
+{"when": 1790851687.3046532, "when_h": "2026-10-01 18:48:07", "verdict": "wrong", "ok": false, "criticals": ["reproducible/C2"], "majors": []}
+{"when": 1790851948.355, "when_h": "2026-10-01 18:52:28", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}

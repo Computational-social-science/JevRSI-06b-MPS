@@ -300,6 +300,15 @@ def main() -> int:
         res.guards_failed = failed
         res.n_failed_guards = len(failed)
         res.reason = reason
+        # WHICH bar this verdict was decided at. A verdict without it is
+        # unreadable the moment the bar moves: `null_floor` is recorded as
+        # `kept_pending_confirm` because +0.0665 cleared +0.0450, and under the
+        # corrected bar (+0.1043) the same arm does not clear at all. Nothing in
+        # the record said which of those two numbers applied, so the row looked
+        # self-consistent under either. The bar moves when a null lands, so this
+        # has to be on every row.
+        import loop as _loop_mod
+        res.bar_used = round(max(float(pre.delta_floor or 0.0), float(_loop_mod.bar())), 6)
         if passed:
             res.verdict = "kept"
         elif len(failed) == 1:
@@ -456,13 +465,21 @@ def main() -> int:
     # letting it go unused would be the exact failure the analysis exists to
     # prevent.
     if pre.arm.startswith("null"):
+        import agenda
+        import confirm
         import power
-        deltas = []
-        for r in read_records():
-            c, k = r.get("pooled_top1_candidate"), r.get("pooled_top1_control")
-            if c is not None and k is not None:
-                deltas.append(c - k)
-        pr = power.analyse(deltas, planned_seeds=2)
+        # ONLY the null series may enter the floor. `agenda.null_deltas` owns that
+        # rule -- it used to be a loop over every recorded arm here, which made the
+        # bar a ratchet: each result raised the threshold for the next one.
+        records = read_records()
+        deltas = agenda.null_deltas(records)
+        skipped = sum(1 for r in records
+                      if not agenda.is_null_series(str(r.get("arm", ""))))
+        # At the budget a DECISIVE arm is actually judged at, not a constant typed
+        # in here. `decisive` runs 3 seeds; deriving the bar at 2 described a design
+        # that does not exist and made the bar stricter than the gate that used it.
+        planned = confirm.seeds_for("decisive")
+        pr = power.analyse(deltas, planned_seeds=planned)
         power.save(pr)
         # Say which path produced the number. With one null arm the sd is NOT
         # measured — it is the fallback — and printing a measured-looking 0.0000
@@ -473,7 +490,9 @@ def main() -> int:
         else:
             src = (f"sd=0.011 FALLBACK (only {pr.n_null_arms} null arm; a floor needs "
                    f">=2 to have a spread)")
-        log(f"POWER     {src}  bar=+{pr.recommended_bar:.4f}")
+        log(f"POWER     {src}  do-nothing {pr.do_nothing_mean:+.4f}  "
+            f"bar=+{pr.recommended_bar:.4f} at {planned} seeds  [{pr.bar_rule}]"
+            + (f"  ({skipped} non-null arm(s) excluded from the floor)" if skipped else ""))
 
     _regen()
     return 0

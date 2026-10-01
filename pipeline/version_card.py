@@ -290,8 +290,8 @@ def build() -> str:
         w(f"{len(arms)} arms: **{len(kept)} kept**, {len(rejected)} published "
           f"negatives, {len(repair)} needing repair, {len(errors)} errors.")
         w("")
-        w("| arm | role | Δ vs control | expected | contamination | verdict |")
-        w("|---|---|---|---|---|---|")
+        w("| arm | role | Δ vs control | expected | bar | contamination | verdict |")
+        w("|---|---|---|---|---|---|---|")
         for a in arms:
             c, k = a.get("pooled_top1_candidate"), a.get("pooled_top1_control")
             d = f"{c - k:+.4f}" if c is not None and k is not None else "—"
@@ -307,8 +307,35 @@ def build() -> str:
                     "**NOT CHECKED**" if not ct else ct[:38])
             seeds = (f" ({a.get('seeds_done', 1)}/{a.get('seeds_required', 1)} seeds)"
                      if a.get("seeds_required", 1) > 1 else "")
+            bu = a.get("bar_used")
+            bu_s = f"+{float(bu):.4f}" if isinstance(bu, (int, float)) else "?"
             w(f"| `{a.get('arm')}` | {a.get('role') or '—'}{seeds} | {d} | {exp_s} | "
-              f"{ct_s} | {a.get('verdict')}{und} |")
+              f"{bu_s} | {ct_s} | {a.get('verdict')}{und} |")
+        # A verdict is unreadable without the bar that produced it, and the bar
+        # moves every time a null lands. `null_floor` is kept_pending_confirm
+        # because +0.0665 cleared +0.0450; under the bar now in force it does not
+        # clear at all. Both statements are true of the same number, so the record
+        # has to say which threshold applied rather than leaving the reader to
+        # assume the current one.
+        stale = [a for a in arms if isinstance(a.get("bar_used"), (int, float))
+                 and pw and abs(float(a["bar_used"]) - pw.recommended_bar) > 1e-6]
+        unrec = [a for a in arms if a.get("bar_used") is None]
+        if pw and (stale or unrec):
+            w("")
+            if stale:
+                w(f"**Gated at a superseded bar.** The bar now in force is "
+                  f"+{pw.recommended_bar:.4f} "
+                  f"({pw.bar_rule or 'rule not recorded'}); these rows were decided at "
+                  + ", ".join(f"`{a['arm']}` +{float(a['bar_used']):.4f}" for a in stale)
+                  + ". Their verdicts stand as recorded — the measurement did not "
+                    "change — but they are not comparable to rows gated at the "
+                    "current bar, and the honest reading of a keeper among them is "
+                    "'cleared a bar that doing nothing also cleared'.")
+            if unrec:
+                w(f"**{len(unrec)} row(s) predate the `bar` column** ("
+                  + ", ".join(f"`{a['arm']}`" for a in unrec)
+                  + "): the record cannot say which bar decided them. Treat those "
+                    "verdicts as unverified against any bar.")
     w("")
 
     if kept:

@@ -94,7 +94,7 @@ def main() -> int:
     check("clears the bar + forgets general knowledge -> 1 guard -> needs_repair",
           len(f1) == 1 and f1[0].startswith("guard:"), str(f1))
     # A genuine two-guard failure: the guard AND a decision benchmark.
-    _, f2, _ = gate(arm(0.720, 0.600,
+    _, f2, _ = gate(arm(0.600 + B + 0.01, 0.600,
                         cand={"td": 0.600 + B + 0.01, "other": 0.50, "mmlu_pro_guard": 0.50},
                         ctrl={"td": 0.60, "other": 0.60, "mmlu_pro_guard": 0.62}))
     check("clears the bar + forgets AND regresses -> 2 guards -> rejected",
@@ -169,6 +169,121 @@ def main() -> int:
           and CHAMPION_SPEC["option_order"] == "shuffled"
           and CHAMPION_SPEC["steps"] == 1500,
           str({k: CHAMPION_SPEC[k] for k in ("readout", "objective", "option_order", "steps")}))
+
+    # ---------------------------------------------------------------- the bar
+    #
+    # Everything above tests that the null series is built correctly. These test
+    # the thing the series is FOR, which is where the pipeline was wrong for a
+    # day: the bar stood at +0.0450 while doing nothing was worth +0.0680, so the
+    # first null arm cleared it and the search recorded plain training as an
+    # improvement. A bar that an arm clearing by training alone can pass is not a
+    # threshold.
+    print("\nthe bar excludes what doing nothing buys")
+    import confirm as _cf
+    import power
+    measured = [0.0665, 0.0435, 0.0940]          # the three measured replicas
+    decisive_seeds = _cf.seeds_for("decisive")
+    pw = power.analyse(measured, planned_seeds=decisive_seeds)
+    check("the bar is derived at the seed budget a DECISIVE arm actually runs",
+          pw.planned_seeds == decisive_seeds,
+          f"bar at {pw.planned_seeds}, decisive arms run {decisive_seeds}")
+    check("the bar sits ABOVE the do-nothing mean",
+          pw.recommended_bar > pw.do_nothing_mean,
+          f"bar +{pw.recommended_bar:.4f} vs doing nothing +{pw.do_nothing_mean:.4f}")
+    check("no arm that changed NOTHING can clear the bar",
+          pw.recommended_bar > max(measured),
+          f"largest null +{max(measured):.4f} — a bar at or below this is a "
+          f"rubber stamp")
+    check("the margin sits on the VARIANCE, not on the effect",
+          abs((pw.recommended_bar - pw.do_nothing_mean)
+              - power.increment_resolvable(pw.paired_sd, decisive_seeds)) < 1e-6,
+          "bar = do-nothing mean + resolvable increment, and nothing else")
+    check("the bar names the rule that produced it",
+          pw.bar_rule == "do_nothing_mean + resolvable increment", pw.bar_rule)
+    check("the rationale says what doing nothing is worth",
+          f"{pw.do_nothing_mean:+.4f}" in pw.bar_rationale,
+          "a bar whose reason cannot be stated is a number someone typed")
+
+    # A hypothesis arm's own effect must never be able to inflate the floor it is
+    # judged against. The daemon used to feed EVERY recorded delta into `analyse`,
+    # which made the bar a ratchet: each result raised the threshold for the next.
+    from agenda import is_null_series, null_deltas
+    mixed = [{"arm": "null1", "pooled_top1_candidate": 0.5585, "pooled_top1_control": 0.4645},
+             {"arm": "confirm__null_floor", "pooled_top1_candidate": 0.508,
+              "pooled_top1_control": 0.4645},
+             {"arm": "champion_base", "pooled_top1_candidate": 0.90,
+              "pooled_top1_control": 0.4645}]
+    check("a hypothesis arm's delta cannot raise the floor",
+          [round(d, 4) for d in null_deltas(mixed)] == [0.094, 0.0435],
+          f"null series from a mixed log: {[round(d, 4) for d in null_deltas(mixed)]} "
+          f"— champion_base's +0.4355 is excluded")
+    check("a record with no control is skipped, not defaulted",
+          null_deltas([{"arm": "null9", "pooled_top1_candidate": 0.5}]) == [],
+          "a delta invented from a missing control is not a measurement")
+
+    # The membership test that keeps the floor honest has to be ONE definition.
+    check("the null series is identified the same way everywhere",
+          is_null_series("null2") and is_null_series("confirm__null_floor")
+          and not is_null_series("champion_base")
+          and not is_null_series("model_layer_mix"),
+          "a producer and a checker that each guess 'is this a null?' will "
+          "disagree silently")
+
+    # ------------------------------------------------------- the seed promise
+    print("\nthe seed is part of the prediction, and it is on disk")
+    for h in nulls:
+        pre_h = next_prereg(h, None)
+        check(f"{h.name} pins seed {h.spec.get('seed')} in its preregistration",
+              pre_h.seed == h.spec.get("seed"),
+              f"prereg says {pre_h.seed}, spec says {h.spec.get('seed')}")
+
+    # ------------------------------------------- the duplicate-run detector
+    #
+    # The general form of the bug that cost D1 its null series, and that came back
+    # as `records/null2`: two arm names, one measurement. `null2` ran at seed 17
+    # while 37 was written down and returned rows bit-identical to `null_floor`.
+    # A measured sd of exactly zero is the signature; this reads the artifacts
+    # themselves so the signature cannot sit unnoticed in `records/`.
+    import hashlib
+    import json as _json
+    root = Path(__file__).resolve().parent.parent
+    sigs: dict[str, list[str]] = {}
+    for d in sorted((root / "records").glob("*/")):
+        for f in sorted(d.glob("*.rows.json")):
+            body = [r for r in _json.loads(f.read_text())
+                    if not isinstance(r, dict) or r.get("arm") in (None, d.name)]
+            sig = hashlib.sha256(
+                _json.dumps(body, sort_keys=True).encode()).hexdigest()[:16]
+            sigs.setdefault(sig, []).append(d.name)
+    dupes = {k: v for k, v in sigs.items() if len(v) > 1}
+    check("no two recorded arms are the same run",
+          not dupes, str(dupes) if dupes else
+          f"{len(sigs)} distinct measurement(s) across {len(list((root / 'records').glob('*/')))} arm dirs")
+
+    # ------------------------------------------------- the state schema gate
+    #
+    # `power.load()` is `PowerResult(**raw)`, so a field added to the dataclass
+    # and not to the file on disk raises TypeError -- and on 2026-10-01 that
+    # killed the doctor for roughly three hours (14:37, 14:52, 15:07, 17:56, all
+    # "could not run: TypeError"), silently, with the watchdog logging the
+    # failure and carrying on. A round-trip through save/load is the cheapest
+    # possible proof that the state file and the dataclass still agree, and it
+    # belongs in the build rather than in a log nobody reads.
+    print("\nthe power state round-trips (a schema drift must fail here, not at 3am)")
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        orig = power.STATE
+        try:
+            power.STATE = Path(td)
+            power.save(pw)
+            back = power.load()
+        finally:
+            power.STATE = orig
+    check("save() then load() returns the same result",
+          back == pw,
+          "" if back == pw else
+          f"mde[1] survives as {pw.mde.get(1)} -> "
+          f"{back.mde.get(1) if back else 'unloadable'}")
 
     print(f"\n{len(FAILS)} failure(s)" if FAILS else "\nALL PASS")
     return 1 if FAILS else 0

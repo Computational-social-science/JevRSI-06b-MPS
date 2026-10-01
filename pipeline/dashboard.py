@@ -234,6 +234,15 @@ def collect() -> dict:
             "noise_sd": pw.noise_sd,
             "measured": pw.n_null_arms >= 2,
             "bar": pw.recommended_bar,
+            # What doing nothing buys, and which rule turned that into the bar.
+            # Both are on the panel because the bar is the number a reader is most
+            # likely to accept without checking, and it is the number that was
+            # wrong on 2026-10-01: +0.0450 while every null arm cleared it.
+            "do_nothing_mean": pw.do_nothing_mean,
+            "bar_rule": pw.bar_rule,
+            "bar_rationale": pw.bar_rationale,
+            "null_deltas": pw.null_deltas,
+            "planned_seeds": pw.planned_seeds,
             "mde": pw.mde,
             "detectable": pw.detectable,
         } if pw else None),

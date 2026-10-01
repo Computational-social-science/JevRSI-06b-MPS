@@ -69,12 +69,19 @@ so rather than quietly benefiting from it.
 The design consequence: power is bought by SEEDS, not by more evaluation data.
 The evaluation set is already the full 2,000-question test split, so there is
 nothing left to widen — only seeds to add, and each costs a full arm.
-  3. The bar set AT the resolution limit — so a null verdict means "this lever
-     does nothing detectable at the power we had", which is a true statement,
-     rather than "we would not have seen it", which is not.
 
-The honest alternative — a bar above resolution and a search that reports
-non-findings as findings — is the failure this whole project exists to avoid.
+  3. The bar set ABOVE what doing nothing buys — not at the resolution limit, and
+     not above the largest null by a flat factor. The null series is a set of
+     replicas of the champion recipe, so every one of them trains and every one
+     of them reports the training effect; their mean is the delta a hypothesis arm
+     gets for free. A bar that ignores that is cleared by an arm that changed
+     nothing, which is not a threshold, it is a rubber stamp.
+
+The honest alternative — a bar that an arm clearing by training alone can pass —
+is the failure this whole project exists to avoid. It was also this project's
+own failure, for one day, on 2026-10-01: the bar stood at +0.0450 while doing
+nothing was worth +0.0680, and the first null arm was recorded as
+`kept_pending_confirm`.
 """
 from __future__ import annotations
 
@@ -96,6 +103,12 @@ class PowerResult:
     # The measured noise floor: sd of the null deltas, and the observed spread.
     noise_sd: float = 0.0
     noise_max_abs: float = 0.0
+    # What DOING NOTHING buys. The null series is a set of replicas of the
+    # champion recipe, so every one of them trains and every one of them reports
+    # the training effect. Their MEAN is therefore the delta that a hypothesis arm
+    # receives for free, before its own change has done anything. A bar that
+    # ignores this is a bar that any arm clears by training.
+    do_nothing_mean: float = 0.0
     # Per-seed sd implied by the null arms, for a paired design.
     paired_sd: float = 0.0
     # What we can detect, per seed budget, at alpha=0.05 one-sided and 80% power.
@@ -118,6 +131,10 @@ class PowerResult:
     note_scale: str = ""    # WHY the bar has the value it has, in words. A number without its reason is
     # an assumption, and this bar has been wrong once already.
     bar_rationale: str = ""
+    # Which rule produced `recommended_bar`, by name. A bar whose rule cannot be
+    # named cannot be re-derived, and a bar that cannot be re-derived is a number
+    # someone typed — which is exactly what adversary/A4 exists to catch.
+    bar_rule: str = ""
 
     def to_json(self) -> dict:
         """Valid JSON only.
@@ -180,11 +197,41 @@ def mde_for_seeds(paired_sd: float, n_seeds: int, *, alpha: float = 0.05,
     return (z_a + z_b) * paired_sd / math.sqrt(n_seeds)
 
 
-# The margin by which the bar must clear the largest observed null. One draw's
-# maximum understates the tail by about a standard deviation, so a bar set AT the
-# observed max would be cleared by the next null roughly half the time. Two
-# multiples puts the bar beyond the noise that has been seen.
-NULL_MARGIN = 2.0
+def increment_resolvable(paired_sd: float, n_seeds: int, *,
+                         alpha: float = 0.05, power: float = 0.80) -> float:
+    """How far above a known reference a hypothesis arm must land to be believable.
+
+    The question the bar actually has to answer is NOT "what can this machine
+    detect from zero?" It is "what would an arm that changed NOTHING look like,
+    and how far above that must a real effect land to be distinguishable?"
+
+    So the reference is the do-nothing mean (measured by the null series) and the
+    margin is the resolvable increment over it. One seed has no variance estimate
+    of its own, so it is judged against the reference with a plain one-sided 5%
+    test — the reference distribution comes from the replicas, not from repeating
+    the arm. From two seeds up, the mean of n paired deltas has sd
+    paired_sd/sqrt(n), so the margin shrinks as 1/sqrt(n), which is where buying
+    power with seeds comes from.
+
+    `NULL_MARGIN` used to live here: a factor of 2 on the largest observed null.
+    It was wrong for a reason worth keeping. These null arms are replicas of a
+    recipe that TRAINS, so their deltas are not noise around zero — they are the
+    training effect itself, around +0.068. Multiplying that by 2 does not "put the
+    bar beyond the noise that has been seen"; it demands that a hypothesis beat
+    plain training by more than training is worth, which set the bar at +0.188 —
+    above every effect upstream reports, including its headline +0.120.
+
+    That is upstream's own diagnosed failure reproduced in a new disguise: a
+    threshold above the design's resolution, which cannot tell "this lever does
+    nothing" from "this lever does something I cannot see", and reports the
+    first. A margin belongs on the VARIANCE. It never belonged on the mean.
+    """
+    if paired_sd <= 0:
+        return 0.0
+    z_a = 1.6449          # one-sided alpha = 0.05
+    z_b = 0.8416          # power = 0.80
+    z = z_a if n_seeds <= 1 else z_a + z_b
+    return z * paired_sd / math.sqrt(max(n_seeds, 1))
 
 
 def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
@@ -225,27 +272,45 @@ def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
     for n in range(1, 9):
         res.mde[n] = round(mde_for_seeds(res.paired_sd, n), 6)
 
-    # The bar: the effect we are powered to see at the planned seed budget.
-    # Rounded UP to two significant figures so a number like 0.0044 does not
-    # read as more precise than a 2,000-question estimate deserves.
+    # THE BAR. Two rules, and which one applies is recorded in `bar_rule`.
+    #
+    # With no null arm there is nothing here that measures what doing nothing
+    # buys, so the only defensible number is the resolution limit — and the
+    # record must say out loud that this bar does NOT exclude the training
+    # effect. It is provisional by construction and is replaced by the first
+    # null.
+    #
+    # Once the null series exists the bar answers the question that actually
+    # matters: an arm that changed nothing lands at `do_nothing_mean`, so the bar
+    # is that mean plus the increment this design can resolve above a known
+    # reference. Setting the bar AT the resolution limit instead — which is what
+    # the rule did until 2026-10-01 — puts it at +0.0450 when doing nothing is
+    # worth +0.0680, so the first null arm cleared it and was recorded as
+    # `kept_pending_confirm`: the search had promoted plain training to champion
+    # and called it an improvement.
     bar_mde = bar_from_mde(res.mde.get(planned_seeds, float("inf")), fallback_sd)
-
-    # THE CORRECTION. A bar derived only from the MDE answers "what can we
-    # detect?" and never "what happens when we do nothing?". Those differ, and
-    # only the second one keeps a null arm out. The bar is therefore also raised
-    # above every null that has actually been observed, with margin: one draw's
-    # max understates the tail by roughly a standard deviation, so a bar set
-    # AT the observed max would be cleared by the next null about half the time.
-    # The margin makes the bar sit above the null, not beside it.
     if null_deltas:
-        bar_null = res.noise_max_abs * NULL_MARGIN
-        if bar_null > bar_mde:
-            res.bar_rationale = (
-                f"set by the observed noise floor ({res.noise_max_abs:.4f} over "
-                f"{len(null_deltas)} null arm(s)), not by the MDE ({bar_mde:.4f}): "
-                f"a bar derived from detectability alone cannot exclude noise that "
-                f"has already been measured")
-            res.recommended_bar = bar_null
+        res.do_nothing_mean = statistics.fmean(null_deltas)
+        inc = increment_resolvable(res.paired_sd, planned_seeds)
+        res.recommended_bar = res.do_nothing_mean + inc
+        res.bar_rule = "do_nothing_mean + resolvable increment"
+        res.bar_rationale = (
+            f"set ABOVE what doing nothing buys, not at the resolution limit. "
+            f"The {len(null_deltas)} null arm(s) are replicas of the champion "
+            f"recipe, so they train: their mean delta {res.do_nothing_mean:+.4f} "
+            f"is the gain every hypothesis arm receives for free. A bar at the "
+            f"detectable minimum ({bar_mde:.4f}) sits BELOW that and would be "
+            f"cleared by an arm that changed nothing at all — which is exactly "
+            f"what happened before this rule. The bar is therefore the "
+            f"do-nothing mean plus the increment resolvable at {planned_seeds} "
+            f"seed(s) ({inc:.4f}).")
+    else:
+        res.bar_rule = "MDE at the planned seed budget (no null arm has run)"
+        res.bar_rationale = (
+            f"PROVISIONAL. No null arm has run, so nothing measures what doing "
+            f"nothing buys; this is the resolution limit ({bar_mde:.4f}) and it "
+            f"does NOT exclude the training effect. It is replaced as soon as "
+            f"the first null lands.")
     res.recommended_bar = round(res.recommended_bar, 6)
     res.planned_seeds = planned_seeds
     res.fallback_sd = fallback_sd
@@ -262,9 +327,11 @@ def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
         f"measured noise sd: {res.noise_sd:.4f}"
         + ("" if res.n_null_arms >= 2 else f"  (FALLBACK {fallback_sd}, <2 null arms)"),
         f"paired sd used:     {res.paired_sd:.4f}",
+        f"doing nothing buys: {res.do_nothing_mean:+.4f}"
+        + ("" if null_deltas else "  (NOT MEASURED — no null arm has run)"),
         f"MDE by seed budget: " + ", ".join(f"{n}s={v:.4f}" for n, v in res.mde.items()
                                            if math.isfinite(v) and v > 0),
-        f"bar at {planned_seeds} seeds: +{res.recommended_bar:.4f}",
+        f"bar at {planned_seeds} seeds: +{res.recommended_bar:.4f}  [{res.bar_rule}]",
         f"detectable: {vis or 'none'}",
         f"NOT detectable: {invis or 'none'}",
     ]
@@ -322,26 +389,38 @@ def load() -> PowerResult | None:
 def main() -> int:
     import argparse
     ap = argparse.ArgumentParser()
-    ap.add_argument("--seeds", type=int, default=2)
+    ap.add_argument("--seeds", type=int, default=0,
+                    help="seed budget to derive the bar at; 0 = the budget a "
+                         "decisive arm actually runs, read from the run config")
     ap.add_argument("--from-arms", default="",
                     help="read null deltas from an arms.jsonl instead of stdin")
     a = ap.parse_args()
 
+    if a.seeds:
+        planned = a.seeds
+    else:
+        # The same source the daemon uses. A CLI that defaulted to its own constant
+        # would be a second implementation of the bar's seed budget, and A4 exists
+        # because second implementations of this rule are how the recorded bar and
+        # the real one drift apart.
+        import confirm as _c
+        planned = _c.seeds_for("decisive")
+
     deltas: list[float] = []
     if a.from_arms:
-        p = Path(a.from_arms)
-        for line in p.read_text().splitlines():
-            if not line.strip():
-                continue
-            r = json.loads(line)
-            c, k = r.get("pooled_top1_candidate"), r.get("pooled_top1_control")
-            if c is not None and k is not None:
-                deltas.append(c - k)
+        import agenda as _ag
+        recs = []
+        for line in Path(a.from_arms).read_text().splitlines():
+            if line.strip():
+                recs.append(json.loads(line))
+        # Only the null series, by the agenda's definition -- not every record.
+        deltas = _ag.null_deltas(recs)
+        print(f"  read {len(recs)} record(s), {len(deltas)} of them null-series")
     else:
         import sys
         deltas = [float(x) for x in sys.stdin.read().split() if x.strip()]
 
-    res = analyse(deltas, planned_seeds=a.seeds)
+    res = analyse(deltas, planned_seeds=planned)
     print("POWER ANALYSIS")
     print("  " + res.verdict)
     p = save(res)

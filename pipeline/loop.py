@@ -110,6 +110,14 @@ class Prereg:
     # the run. And how many runs this arm is owed.
     role: str = ""
     seeds_required: int = 1
+    # The seed this arm is promised to run on. It belongs in the preregistration
+    # because it is part of the prediction, not a detail of execution: the null
+    # series exists to sample the SEED axis, so a run on the wrong seed is not a
+    # noisier measurement, it is a different measurement wearing the same name.
+    # `null2` once ran at seed 17 while 37 was written down here, and came back
+    # bit-identical to the seed-17 arm beside it. The promise has to be on disk to
+    # be checkable.
+    seed: int | None = None
     ts: float = field(default_factory=time.time)
 
     def to_json(self) -> dict[str, Any]:
@@ -152,6 +160,12 @@ class ArmResult:
     seeds_required: int = 1
     # How many runs of this arm have actually completed, including confirmations.
     seeds_done: int = 0
+    # The effective bar this arm's verdict was decided at — the gate uses
+    # max(preregistered floor, measured bar), and the bar MOVES every time a null
+    # lands. Recorded per row because a verdict is unreadable without it: the same
+    # +0.0665 is a keeper at +0.0450 and a reject at +0.1043, and a record that
+    # does not say which bar applied looks self-consistent under either.
+    bar_used: float | None = None
     # per-benchmark, for the "no benchmark down by more than its seed noise" rule
     per_target_top1: dict[str, float] = field(default_factory=dict)
     per_target_top1_control: dict[str, float] = field(default_factory=dict)

@@ -2,14 +2,14 @@
   "arm": "null1",
   "axis": "training",
   "change": "NOTHING, again: the champion spec, run point 2 of the null series.",
-  "champion": "null_floor @ top1=0.5310",
-  "pooled_top1_candidate": 0.531,
+  "champion": "none (first arm: no champion yet)",
+  "pooled_top1_candidate": 0.5585,
   "pooled_top1_control": 0.4645,
-  "min_decision_score_candidate": -9.740259740259749,
+  "min_decision_score_candidate": 11.363636363636367,
   "min_decision_score_control": 6.493506493506493,
-  "pooled_aurc_candidate": 0.3690593258501278,
+  "pooled_aurc_candidate": 0.36542247491846874,
   "pooled_aurc_control": 0.40304980420715664,
-  "ece_candidate": 0.050272067387898765,
+  "ece_candidate": 0.09179327512780824,
   "ece_control": 0.15428468917806945,
   "n_questions": 2000,
   "targets_used": [
@@ -17,10 +17,18 @@
     "mmlu_pro_guard",
     "typed_decisions"
   ],
+  "contamination": "clean: 7414 train vs 600 eval, 0 exact / 0 near",
+  "artifact": "",
+  "champion_delta": null,
+  "champion_arm": "",
+  "role": "",
+  "expected_effect": null,
+  "seeds_required": 1,
+  "seeds_done": 0,
   "per_target_top1": {
-    "in_distribution": 0.7455065359477124,
-    "typed_decisions": 0.531,
-    "mmlu_pro_guard": 0.19
+    "in_distribution": 0.7487745098039216,
+    "typed_decisions": 0.5585,
+    "mmlu_pro_guard": 0.175
   },
   "per_target_top1_control": {
     "in_distribution": 0.5674019607843137,
@@ -36,17 +44,19 @@
     "arm": "null1",
     "axis": "training",
     "change": "NOTHING, again: the champion spec, run point 2 of the null series.",
-    "prediction": "Identical to the control, so this delta is 0 up to run-to-run variation. Null point 2 of 4; the SPREAD of the four is the noise floor, and the bar is set there rather than above it. A different seed, so this samples the seed axis of the variance and not only the process axis.",
+    "prediction": "Replica 2 of 4 of the champion recipe, on seed 27. Its delta should land near the champion's own effect, not at zero \u2014 it trains. What must differ between the four is the seed, and what they jointly measure is the SPREAD of the delta, which is the noise floor the bar is then set at rather than above. If these four came back identical, that would not mean the pipeline is deterministic; it would mean the seeds were not applied.",
     "delta_floor": 0.006,
     "direction": "up",
-    "null_floor_vs": "null_floor @ top1=0.5310",
+    "null_floor_vs": "none (first arm: no champion yet)",
     "expected_effect": 0.0,
     "source": "CONTRIBUTING.md: null floors are measured, not assumed",
-    "ts": 1790804790.820821
+    "role": "calibration",
+    "seeds_required": 1,
+    "ts": 1790841146.690038
   },
-  "train_seconds": 3221,
-  "final_loss": 0.6331608295440674,
+  "train_seconds": 5001,
+  "final_loss": 0.7811298966407776,
   "error": "",
-  "checkpoint": "",
-  "ts": 1790804793.244978
+  "checkpoint": "/Users/huzhiwen/research/rsijev-06b/ckpt/null1",
+  "ts": 1790841149.388754
 }

@@ -54,12 +54,27 @@ def main() -> int:
     check("the narrow pattern is the one that is correct",
           "watchdog.py" in out or rc == 0)
 
-    print("\nV2 was never a real check")
+    print("\nV2 can fail, which is the only thing that makes it a guard")
     _, F2 = doctor.auditor_vitals()
     v2 = next(f for f in F2 if f.invariant == "V2")
-    check("V2 is hardcoded ok=True — it cannot fail, so it is decoration",
-          v2.ok is True and v2.severity == "info", v2.evidence[0])
-    print("    ^ left in place deliberately, but it must not be counted as a guard")
+    check("V2 is satisfied while a single arm runs",
+          v2.ok is True and v2.severity == "critical", v2.evidence[0])
+    # The negative control: two arms at once must be visible. It was not, for the
+    # whole of 2026-10-01, while two null2 processes were live.
+    real = doctor.arm_pids
+    try:
+        doctor.arm_pids = lambda: ["111", "222"]
+        _, F3 = doctor.auditor_vitals()
+        v3 = next(f for f in F3 if f.invariant == "V2")
+    finally:
+        doctor.arm_pids = real
+    check("V2 FIRES on two concurrent arms",
+          v3.ok is False and v3.severity == "critical", v3.evidence[0])
+    src = (ROOT / "pipeline" / "doctor.py").read_text()
+    check("... and the pattern is narrow enough not to match a shell",
+          '"pipeline/run_one.py --arm"' in src
+          and '["pgrep", "-f", "run_one.py"]' not in src,
+          "a bare 'run_one.py' also matches the greps that look for it")
 
     print(f"\n{len(FAILS)} failure(s)" if FAILS else "\nALL PASS")
     return 1 if FAILS else 0

@@ -89,6 +89,22 @@ class Report:
 
 
 # ----------------------------------------------------------------- the auditors
+def arm_pids() -> list[str]:
+    """pids of arms actually running.
+
+    The pattern includes the flags a real invocation carries, because
+    `pgrep -f run_one.py` also matches any shell whose command line happens to
+    mention the file -- including the ones grepping for it while diagnosing this
+    very question. Same trap, same fix as the watchdog check below.
+
+    A named function so a test can substitute a process list: a check that can
+    only be exercised by really starting two arms is a check nobody runs.
+    """
+    r = subprocess.run(["pgrep", "-f", "pipeline/run_one.py --arm"],
+                       capture_output=True, text=True)
+    return [p for p in r.stdout.split() if p.strip()]
+
+
 def auditor_vitals() -> tuple[str, list[Finding]]:
     """Is the loop running, and is it advancing rather than wedged?"""
     F: list[Finding] = []
@@ -102,10 +118,18 @@ def auditor_vitals() -> tuple[str, list[Finding]]:
                      severity="major", detail="nobody will start it again",
                      evidence=["launchctl list"]))
 
-    arm = sh(["pgrep", "-f", "run_one.py"])
-    F.append(Finding("V2", "an arm is running or the loop is between arms",
-                     ok=True, severity="info",
-                     detail="", evidence=[f"arm running: {arm}"]))
+    pids = arm_pids()
+    F.append(Finding("V2", "at most one arm runs at a time",
+                     ok=len(pids) <= 1, severity="critical",
+                     detail=("two arms writing the same records/<arm>/ and "
+                             "ckpt/<arm>/ at once is the duplicate-measurement "
+                             "failure this project has already paid for once -- two "
+                             "arm names, one run, left in records/ where a reader "
+                             "takes them for points of a spread. This check was "
+                             "hardcoded ok=True and therefore blind to exactly that: "
+                             "two null2 processes were live for 20 minutes on "
+                             "2026-10-01 and this panel could not see them."),
+                     evidence=[f"arm pids: {pids or 'none'}"]))
 
     # "The watchdog is alive" is a question only the watchdog can answer without
     # help. Asking `pgrep` means asking a process-listing tool to recognise a
@@ -195,6 +219,88 @@ def auditor_adversary() -> tuple[str, list[Finding]]:
     return "adversary", adversary.probe(arms)
 
 
+def _pids_named(*frags: str) -> list[tuple[int, float]]:
+    """(pid, absolute_start_time) for processes whose command matches a fragment.
+
+    macOS `ps` has no `etimes` -- that column is Linux-only -- so the first
+    version of this helper raised on this machine, the lens did nothing, and the
+    doctor reported healthy while the daemon gated with a four-times-weaker bar.
+    A guard that cannot run on the platform it runs on is worse than no guard,
+    because it is indistinguishable from one.
+    """
+    out: list[tuple[int, float]] = []
+    try:
+        r = subprocess.run(["ps", "-eo", "pid=,etime=,command="],
+                           capture_output=True, text=True, timeout=20)
+    except Exception:
+        return out
+    now = time.time()
+    for line in r.stdout.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) < 3 or "ps -eo" in line:
+            continue
+        pid, etime, cmd = parts
+        if not any(f in cmd for f in frags):
+            continue
+        days, etime = 0, etime
+        if "-" in etime:
+            d, _, etime = etime.partition("-")
+            days = int(d or 0)
+        bits = [float(x) for x in etime.split(":")]
+        if len(bits) == 3:
+            secs = bits[0] * 3600 + bits[1] * 60 + bits[2]
+        else:
+            secs = bits[-1] + (bits[0] * 60 if len(bits) == 2 else 0)
+        try:
+            out.append((int(pid), now - (days * 86400 + secs)))
+        except ValueError:
+            continue
+    return out
+
+
+def self_processes() -> list[tuple[int, float, str]]:
+    """(pid, absolute_start_time, script) for every live process of THIS project.
+
+    The dashboard, the watchdog, the publisher and the loop are all long-lived and
+    all read `state/`. A module corrected on disk reaches none of them until they
+    are restarted, so a check that only asks about the loop is blind to the other
+    three -- and the dashboard served HTTP 200 with `/api/status` returning 500
+    for hours that way, which looks exactly like a working system to anyone
+    checking that the page loads.
+
+    The script name is returned so a finding can say WHICH service is stale
+    instead of quoting a pid, because the fix is a restart and the restart needs
+    a name.
+    """
+    out: list[tuple[int, float, str]] = []
+    try:
+        r = subprocess.run(["ps", "-eo", "pid=,etime=,command="],
+                           capture_output=True, text=True, timeout=20)
+    except Exception:
+        return out
+    now = time.time()
+    for line in r.stdout.splitlines():
+        parts = line.split(None, 2)
+        if len(parts) < 3 or "ps -eo" in line:
+            continue
+        pid, etime, cmd = parts
+        if f"{ROOT}/pipeline/" not in cmd:
+            continue
+        days, etime = 0, etime
+        if "-" in etime:
+            d, _, etime = etime.partition("-")
+            days = int(d or 0)
+        bits = [float(x) for x in etime.split(":")]
+        secs = (bits[0] * 3600 + bits[1] * 60 + bits[2]) if len(bits) == 3 \
+            else (bits[0] * 60 + bits[1]) if len(bits) == 2 else bits[0]
+        script = ""
+        for tok in cmd.split():
+            if tok.endswith(".py") and "/pipeline/" in tok:
+                script = Path(tok).name
+        out.append((int(pid), now - (days * 86400 + secs), script or "?"))
+    return out
+
+
 def auditor_reproducible() -> tuple[str, list[Finding]]:
     """Could a stranger clone this and rerun it?
 
@@ -213,14 +319,52 @@ def auditor_reproducible() -> tuple[str, list[Finding]]:
         cwd=ROOT, capture_output=True, text=True, timeout=300, env=env)
     fails = [l.strip() for l in r.stdout.splitlines() if l.strip().startswith("FAIL")]
     ev = (fails[:4] or ["all conventions hold"])
-    return "reproducible", [Finding(
-        "C1", "the repository is reproducible from a clean clone", ok=r.returncode == 0,
+    # Does the RUNNING loop use the science currently on disk? A long-lived process
+    # holds its modules in memory, so correcting power.py or loop.py does NOT reach
+    # it. This happened for real: the bar was corrected on disk to 0.188 while the
+    # daemon went on gating at 0.045, and nothing said so — the pipeline reported
+    # healthy throughout. For a 24/7 loop that is the most dangerous kind of quiet:
+    # the file on disk and the science being applied are two different things, and
+    # only one of them is running.
+    #
+    # It is not only the loop. The dashboard, the watchdog and the publisher are
+    # long-lived too, and they read the same state. On 2026-10-01 the dashboard
+    # kept serving its page while `/api/status` returned HTTP 500 --
+    # `PowerResult.__init__() got an unexpected keyword argument 'do_nothing_mean'`
+    # -- because it was started three hours before `power.json` grew a field. The
+    # same failure had already killed the watchdog silently at 14:37, 14:52, 15:07
+    # and 17:56 ("DOCTOR could not run: TypeError"), four times, with the watchdog
+    # logging each one and carrying on. A page that loads and a job that keeps
+    # running are not evidence that they are working.
+    #
+    # So the check asks about EVERY process of this project, not the two the loop
+    # happens to own. Erring toward reporting is right: a false positive is a line
+    # of text and a restart, and it clears itself the moment the service is
+    # restarted.
+    stale = []
+    for pid, start, script in self_processes():
+        for mod in ("pipeline/power.py", "pipeline/loop.py"):
+            f_ = ROOT / mod
+            if f_.exists() and start and f_.stat().st_mtime > start:
+                stale.append(f"{mod} edited after {script} (pid {pid}) started")
+    findings = [Finding(
+        "C2", "the RUNNING loop uses the science currently on disk",
+        ok=not stale, severity="critical" if stale else "info",
+        detail=("the loop is gating with modules older than the ones on disk: "
+                + "; ".join(stale[:3]) if stale
+                else "every running process postdates power.py and loop.py"),
+        repair=("restart the daemon so the corrected gate takes effect; the arm in "
+                "flight is left to finish" if stale else ""))]
+    findings.append(Finding(
+        "C1", "the repository is reproducible from a clean clone",
+        ok=r.returncode == 0,
         severity="major" if r.returncode else "info",
         detail=("a hardcoded path, an unpinned dependency, a missing licence or "
                 "non-English documentation means the numbers cannot be re-derived"
                 if r.returncode else "conventions hold"),
         evidence=ev,
-        repair="fix the convention violations; see tests/test_conventions.py")]
+        repair="fix the convention violations; see tests/test_conventions.py"))
+    return "reproducible", findings
 
 
 AUDITORS = (auditor_vitals, auditor_provenance, auditor_methodology,

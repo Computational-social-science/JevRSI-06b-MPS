@@ -218,11 +218,24 @@ function chart(d){
        stroke="var(--mut)" stroke-width="1" stroke-dasharray="2 3" opacity=".5"/>`;
   s+=`<text class="tick" x="${W-P.r}" y="${(Y(0)-5).toFixed(1)}" text-anchor="end">no change vs control</text>`;
   if(d.power){
+    // The do-nothing line. Every arm here is a replica of a recipe that TRAINS,
+    // so this is not zero: it is the gain an arm receives before its own change
+    // has done anything, and it is the reason the bar cannot be the resolution
+    // limit. Drawn on the same axis as the bar so the gap between them is the
+    // margin, visible rather than asserted.
+    if(typeof d.power.do_nothing_mean==="number"){
+      const dy=Y(d.power.do_nothing_mean);
+      s+=`<line x1="${P.l}" y1="${dy.toFixed(1)}" x2="${W-P.r}" y2="${dy.toFixed(1)}"
+           stroke="var(--mut)" stroke-width="1.5" stroke-dasharray="2 4"/>`;
+      s+=`<text class="tick" x="${P.l+4}" y="${(dy+12).toFixed(1)}"
+           style="fill:var(--mut)">doing nothing buys ${sgn(d.power.do_nothing_mean)}</text>`;
+    }
     const by=Y(d.power.bar);
     s+=`<line x1="${P.l}" y1="${by.toFixed(1)}" x2="${W-P.r}" y2="${by.toFixed(1)}"
          stroke="var(--bad)" stroke-width="1.5" stroke-dasharray="5 3"/>`;
     s+=`<text class="tick" x="${P.l+4}" y="${(by-5).toFixed(1)}"
-         style="fill:var(--bad)">bar +${d.power.bar.toFixed(4)}</text>`;
+         style="fill:var(--bad)">bar +${d.power.bar.toFixed(4)}${
+           d.power.bar_rule?"  ["+esc(d.power.bar_rule)+"]":""}</text>`;
   }
   let best=null,pts=[];
   A.forEach((a,i)=>{if(best===null||a.delta>best)best=a.delta;

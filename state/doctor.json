@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790849004.8727622,
-  "when_h": "2026-10-01 18:03:24",
+  "when": 1790851948.355,
+  "when_h": "2026-10-01 18:52:28",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -23,12 +23,12 @@
         },
         {
           "invariant": "V2",
-          "title": "an arm is running or the loop is between arms",
+          "title": "at most one arm runs at a time",
           "ok": true,
-          "severity": "info",
-          "detail": "",
+          "severity": "critical",
+          "detail": "two arms writing the same records/<arm>/ and ckpt/<arm>/ at once is the duplicate-measurement failure this project has already paid for once -- two arm names, one run, left in records/ where a reader takes them for points of a spread. This check was hardcoded ok=True and therefore blind to exactly that: two null2 processes were live for 20 minutes on 2026-10-01 and this panel could not see them.",
           "evidence": [
-            "arm running: True"
+            "arm pids: ['16955']"
           ],
           "repair": ""
         },
@@ -39,7 +39,7 @@
           "severity": "major",
           "detail": "nothing re-asserts sleep prevention or restarts the loop",
           "evidence": [
-            "pgrep watchdog"
+            "this diagnosis is running inside the watchdog (pid 17522)"
           ],
           "repair": ""
         },
@@ -61,7 +61,7 @@
           "severity": "major",
           "detail": "a full disk kills an arm mid-write and takes the checkpoint",
           "evidence": [
-            "3683 GB free"
+            "3706 GB free"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 283s ago"
+            "last arm-log write 61s ago"
           ],
           "repair": ""
         }
@@ -100,9 +100,9 @@
           "title": "every result has a prediction registered before it",
           "ok": true,
           "severity": "critical",
-          "detail": "2 result(s), all preregistered",
+          "detail": "3 result(s), all preregistered",
           "evidence": [
-            "2 results, 4 preregs"
+            "3 results, 9 preregs"
           ],
           "repair": ""
         },
@@ -113,7 +113,7 @@
           "severity": "major",
           "detail": "none dangling",
           "evidence": [
-            "in flight: null1"
+            "in flight: null2"
           ],
           "repair": ""
         },
@@ -149,11 +149,11 @@
           "invariant": "I5",
           "title": "the noise floor is measured, or its absence declared",
           "ok": true,
-          "severity": "minor",
+          "severity": "info",
           "detail": "declared",
           "evidence": [
-            "1 null arm(s): the floor is still the 0.011 FALLBACK",
-            "declared as a fallback in the record rather than passed off as measured"
+            "3 null arms, measured paired sd 0.0253",
+            "bar +0.1043"
           ],
           "repair": ""
         },
@@ -164,8 +164,8 @@
           "severity": "major",
           "detail": "in order",
           "evidence": [
-            "queue head: null1",
-            "in flight : null1"
+            "queue head: null2",
+            "in flight : null2"
           ],
           "repair": ""
         },
@@ -206,7 +206,7 @@
           "severity": "critical",
           "detail": "verified per arm",
           "evidence": [
-            "2 arm(s) all checked"
+            "3 arm(s) all checked"
           ],
           "repair": ""
         },
@@ -226,10 +226,10 @@
           "title": "only the surviving lineage keeps its weights",
           "ok": true,
           "severity": "info",
-          "detail": "1.79 GB held, all of it lineage",
+          "detail": "0.00 GB held, all of it lineage",
           "evidence": [
             "survivor weights: none yet",
-            "ckpt total 1.79 GB"
+            "ckpt total 0.00 GB"
           ],
           "repair": "python pipeline/lineage.py --apply"
         },
@@ -268,8 +268,9 @@
           "title": "every headline number recomputes from its raw rows",
           "ok": true,
           "severity": "info",
-          "detail": "2 most recent arm(s) recomputed from raw per-question rows",
+          "detail": "3 most recent arm(s) recomputed from raw per-question rows",
           "evidence": [
+            "18592 raw rows, 6 per-target numbers recomputed",
             "18592 raw rows, 6 per-target numbers recomputed",
             "18592 raw rows, 6 per-target numbers recomputed"
           ],
@@ -280,10 +281,11 @@
           "title": "every delta follows from its own candidate and control",
           "ok": true,
           "severity": "info",
-          "detail": "2 checks agree; first: null_floor: delta not recorded, pooled pair is self-consistent",
+          "detail": "3 checks agree; first: null_floor: delta not recorded, pooled pair is self-consistent",
           "evidence": [
             "no champion_delta recorded; pooled candidate - control = +0.066500",
-            "no champion_delta recorded; pooled candidate - control = +0.043500"
+            "no champion_delta recorded; pooled candidate - control = +0.043500",
+            "no champion_delta recorded; pooled candidate - control = +0.094000"
           ],
           "repair": ""
         },
@@ -294,8 +296,8 @@
           "severity": "info",
           "detail": "the control is shared by every arm",
           "evidence": [
-            "1 distinct control value(s) across 2 arm(s)",
-            "control 0.464500: null_floor, confirm__null_floor"
+            "1 distinct control value(s) across 3 arm(s)",
+            "control 0.464500: null_floor, confirm__null_floor, null1"
           ],
           "repair": ""
         },
@@ -306,10 +308,10 @@
           "severity": "info",
           "detail": "the bar follows from the rule",
           "evidence": [
-            "null deltas fed back in: [0.0665]",
-            "at planned_seeds=2, fallback_sd=0.011",
-            "re-derived recommended_bar 0.133000",
-            "recorded  recommended_bar 0.133000",
+            "null deltas fed back in: [0.0665, 0.04349999999999998, 0.09399999999999997]",
+            "at planned_seeds=3, fallback_sd=0.011",
+            "re-derived recommended_bar 0.104296",
+            "recorded  recommended_bar 0.104296",
             "champion delta (none)"
           ],
           "repair": ""
@@ -319,20 +321,30 @@
           "title": "a measured noise floor is the null arms' own spread",
           "ok": true,
           "severity": "info",
-          "detail": "the floor is still the declared fallback (known limitation, not a violation)",
+          "detail": "the measured floor is the null arms' own spread",
           "evidence": [
-            "1 null arm(s); a spread needs >= 2"
+            "3 null deltas: +0.0665, +0.0435, +0.0940",
+            "recomputed sample sd 0.025283 vs recorded paired_sd 0.025283"
           ],
           "repair": ""
         }
       ]
     },
     "reproducible": {
-      "n": 1,
-      "ok": 1,
+      "n": 2,
+      "ok": 2,
       "critical": [],
       "major": [],
       "findings": [
+        {
+          "invariant": "C2",
+          "title": "the RUNNING loop uses the science currently on disk",
+          "ok": true,
+          "severity": "info",
+          "detail": "every running process postdates power.py and loop.py",
+          "evidence": [],
+          "repair": ""
+        },
         {
           "invariant": "C1",
           "title": "the repository is reproducible from a clean clone",
