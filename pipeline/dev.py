@@ -51,6 +51,14 @@ import torch
 # against the origin remains possible without editing a file — and the record
 # says which endpoint was used, so a number fetched from one is never silently
 # pooled with a number fetched from the other.
+#
+# The same rule applies to non-HuggingFace downloads, and it is not always
+# HuggingFace that is the slow one. Measured on this machine for the Lean 4
+# toolchain: the official `releases.lean-lang.org` tarball ran at 33 KB/s, while
+# the byte-identical asset on the project's GitHub release served at 600 KB/s —
+# 18x. The domestic mirror rule is therefore "prefer a source that is actually
+# fast and reachable here", and HuggingFace is merely the most common case of it,
+# not the whole of it. Do not assume a package's official host is its best host.
 _MIRROR = "https://hf-mirror.com"
 
 

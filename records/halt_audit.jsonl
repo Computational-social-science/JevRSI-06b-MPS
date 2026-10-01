@@ -33,3 +33,5 @@
 {"ts": 1790838898.771016, "when_h": "2026-10-01 15:14:58", "action": "cleared", "why": "exit-code probe: I2 planted and removed", "findings": ["by test"]}
 {"ts": 1790839496.993789, "when_h": "2026-10-01 15:24:56", "action": "halted", "why": "the loop is running but the SCIENCE is not: methodology/I5. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.", "findings": ["methodology/I5"]}
 {"ts": 1790839501.490779, "when_h": "2026-10-01 15:25:01", "action": "cleared", "why": "exit-code probe: I2 planted and removed", "findings": ["by test"]}
+{"ts": 1790839502.799669, "when_h": "2026-10-01 15:25:02", "action": "halted", "why": "the loop is running but the SCIENCE is not: provenance/I2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.", "findings": ["provenance/I2"]}
+{"ts": 1790839502.819286, "when_h": "2026-10-01 15:25:02", "action": "cleared", "why": "exit-code probe: I2 planted and removed", "findings": ["by test"]}
