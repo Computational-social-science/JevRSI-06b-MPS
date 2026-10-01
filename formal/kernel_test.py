@@ -26,6 +26,7 @@ hollowed out. Neither alone is worth much.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -34,7 +35,27 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 FORMAL = ROOT / "formal"
-LEAN = Path.home() / ".elan" / "bin" / "lean"
+# Resolve the compiler rather than assuming one location. The elan shim exists
+# only once elan has successfully installed a toolchain, and it is exactly the
+# thing that was broken here: elan's own downloader stalled at 0 KB/s, a manual
+# download died mid-stream, and `tar` extracted the truncated archive into the
+# toolchain directory without complaint. So the search order is: the toolchain
+# binary itself, then the elan shim, then whatever is on PATH — and the first
+# one that cannot print a version is skipped rather than trusted.
+_CANDIDATES = [
+    Path.home() / ".elan" / "toolchains" / "leanprover--lean4---v4.34.1" / "bin" / "lean",
+    Path.home() / ".elan" / "bin" / "lean",
+]
+
+
+def _find_lean() -> "subprocess.CompletedProcess | None":
+    import shutil
+    for cand in _CANDIDATES + ([shutil.which("lean")] if shutil.which("lean") else []):
+        if cand and Path(cand).is_file() and os.access(cand, os.X_OK):
+            r = subprocess.run([str(cand), "--version"], capture_output=True, text=True)
+            if r.returncode == 0 and "lean" in (r.stdout + r.stderr).lower():
+                return r
+    return None
 
 # Lean's own foundational axioms. Resting on these is not a shortcut around the
 # kernel; it is what `lean` means. Anything else is a defect.
@@ -50,18 +71,33 @@ def check(name: str, cond: bool, detail: str = "") -> None:
 
 
 def run_lean(path: Path) -> subprocess.CompletedProcess:
+    lean = str(_find_lean_path())
     return subprocess.run(
-        [str(LEAN), "--root", str(FORMAL), str(path.name)],
+        [lean, "--root", str(FORMAL), str(path.name)],
         cwd=FORMAL, capture_output=True, text=True, timeout=900,
     )
+
+
+def _find_lean_path() -> Path:
+    for cand in _CANDIDATES:
+        if cand.is_file() and os.access(cand, os.X_OK):
+            return cand
+    import shutil
+    w = shutil.which("lean")
+    return Path(w) if w else _CANDIDATES[0]
 
 
 # ------------------------------------------------------------------ 1. kernel
 def kernel_test() -> None:
     print("THE KERNEL TEST — what does each proof term actually rest on?")
-    if not LEAN.is_file():
-        check("lean is installed", False, f"{LEAN} not found")
+    found = _find_lean()
+    if found is None:
+        check("a WORKING lean is installed", False,
+              "no candidate ran; a half-extracted toolchain reports success on "
+              "--version only if it is asked the wrong question")
         return
+    check("a working lean is installed", True,
+          (found.stdout + found.stderr).strip().splitlines()[0][:40])
     r = run_lean(FORMAL / "Axioms.lean")
     if r.returncode != 0:
         check("Axioms.lean compiles", False, r.stderr.strip()[:200])

@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790839876.123331,
-  "when_h": "2026-10-01 15:31:16",
+  "when": 1790840102.874741,
+  "when_h": "2026-10-01 15:35:02",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -61,7 +61,7 @@
           "severity": "major",
           "detail": "a full disk kills an arm mid-write and takes the checkpoint",
           "evidence": [
-            "3699 GB free"
+            "3700 GB free"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 196s ago"
+            "last arm-log write 68s ago"
           ],
           "repair": ""
         }
