@@ -347,14 +347,22 @@ def auditor_reproducible() -> tuple[str, list[Finding]]:
             f_ = ROOT / mod
             if f_.exists() and start and f_.stat().st_mtime > start:
                 stale.append(f"{mod} edited after {script} (pid {pid}) started")
+    # The evidence is the list of stale processes. Without it the finding names a
+    # condition ("the science on disk is not the science running") and not a thing
+    # to restart, and the repair — which is a list of job labels — has nothing to
+    # act on.
+    live = [f"{script} (pid {pid}, {(time.time() - start) / 60:.0f} min)"
+            for pid, start, script in self_processes()]
     findings = [Finding(
         "C2", "the RUNNING loop uses the science currently on disk",
         ok=not stale, severity="critical" if stale else "info",
         detail=("the loop is gating with modules older than the ones on disk: "
                 + "; ".join(stale[:3]) if stale
                 else "every running process postdates power.py and loop.py"),
-        repair=("restart the daemon so the corrected gate takes effect; the arm in "
-                "flight is left to finish" if stale else ""))]
+        evidence=stale[:6] or live[:6],
+        repair=("restart the services named above so they run the code on disk; "
+                "the daemon's restart waits for the arm in flight to land, because "
+                "the daemon is what records that arm's result" if stale else ""))]
     findings.append(Finding(
         "C1", "the repository is reproducible from a clean clone",
         ok=r.returncode == 0,
