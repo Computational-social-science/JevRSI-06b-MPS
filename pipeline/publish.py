@@ -59,6 +59,15 @@ sys.path.insert(0, str(ROOT / "pipeline"))
 RECORDS = ROOT / "records"
 STATE = ROOT / "state"
 
+# The durable, COMMITTED record of every publication decision. `logs/` is
+# gitignored — correctly, since a log is a debugging artifact — which means an
+# unattended sync would leave no answer to "did it publish, and what did it
+# decide" once the week is over. This file is the one that gets committed, so the
+# refusal history travels with the repository: a reader can see that on some day
+# the pipeline declined to publish, and why. A sync whose decisions vanish is an
+# unaudited sync.
+DECISIONS = RECORDS / "publish_decisions.jsonl"
+
 # Append-only evidence. Every line of these must parse before a commit.
 APPEND_ONLY = ("arms.jsonl", "prereg.jsonl", "champions.jsonl", "halt_audit.jsonl")
 
@@ -278,9 +287,11 @@ def publish(dry_run: bool = False, push: bool = False) -> Decision:
 
     if d.reasons:
         d.may_publish = False
+        record_decision(d)
         return d
     if dry_run:
         d.notes.append("dry run: nothing committed")
+        record_decision(d)
         return d
 
     for arm in fresh:
@@ -298,18 +309,35 @@ def publish(dry_run: bool = False, push: bool = False) -> Decision:
     if rc_has_head != 0:
         body = ROOT / "docs" / "ROOT_COMMIT.md"
         if body.is_file():
-            git("commit", "-q", "-F", str(body))
+            # The root commit is the one exception: it is a real, substantive
+            # publication, so its decision line belongs inside it. Every later run
+            # rides its line along with whatever real change it finds.
+            record_decision(d)
+            d = git("commit", "-q", "-F", str(body))
             d.notes.append("root commit: message from docs/ROOT_COMMIT.md")
             return _finish(d, push)
         d.reasons.append("no HEAD and no docs/ROOT_COMMIT.md to describe the root "
                          "commit — refusing to invent one")
         d.may_publish = False
+        record_decision(d)
         return d
 
+    # Stage FIRST, then record. The staging snapshot is taken before this run's
+    # decision line exists, so the log rides along with whatever REAL change the
+    # run found and is committed by the NEXT run that has one.
+    #
+    # The alternative — recording before staging — makes the log self-sustaining:
+    # every run appends a line, the tree is therefore never clean, so every run
+    # commits, so every run appends. That is 48 commits a day, each one line, each
+    # saying nothing, and it buries the commits that matter. An audit log must not
+    # be able to manufacture the events it exists to record.
+    rc, _ = git("add", "-A")
+    record_decision(d)
     rc, out = git("commit", "-m", message(d, fresh))
     if rc != 0 and "nothing to commit" not in out:
         d.reasons.append(f"git commit failed: {out.strip()[:160]}")
         d.may_publish = False
+        record_decision(d)
         return d
     d.notes.append(f"committed {d.staged} path(s)")
 
@@ -355,6 +383,24 @@ def _last_published_arms() -> set[str]:
     return names
 
 
+def record_decision(d: Decision) -> None:
+    """Append the decision to the committed log. Idempotent, append-only, small.
+
+    One line per run. Written whether the run published or refused, because the
+    refusals are the interesting half: they are the record of the critical agent
+    stopping the pipeline from saying something it should not have said.
+    """
+    try:
+        DECISIONS.parent.mkdir(parents=True, exist_ok=True)
+        with DECISIONS.open("a") as fh:
+            fh.write(json.dumps(d.to_json(), default=str) + "\n")
+    except OSError as exc:
+        # Never let the audit write stop the publish. A publisher that cannot
+        # record its decision should still be safe to run; the log is a
+        # convenience, the gate is the control.
+        d.notes.append(f"could not append to {DECISIONS.name}: {exc}")
+
+
 def render(d: Decision) -> str:
     L = []
     w = L.append
@@ -376,12 +422,20 @@ if __name__ == "__main__":
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--push", action="store_true")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--quiet", action="store_true",
+                    help="for unattended runs: no stdout unless something happened")
     a = ap.parse_args()
     if not (ROOT / ".git").is_dir():
         print("  not a git repository — `git init` first")
         raise SystemExit(1)
+    # `publish()` records the decision itself on every path, including the ones
+    # that refuse — the refusals are the half worth keeping. Calling
+    # `record_decision` again here would double every line.
     r = publish(dry_run=a.dry_run, push=a.push)
-    print(render(r))
+    if not (a.quiet and r.may_publish and not r.reasons):
+        print(render(r))
     if a.json:
         print(json.dumps(r.to_json(), indent=2))
+    # Exit 0 on a clean publish or a clean no-op. Exit 2 on a REFUSAL, so an
+    # operator (or a launchd log) can tell "nothing to do" from "held back".
     raise SystemExit(0 if (r.may_publish or not r.staged) else 2)
