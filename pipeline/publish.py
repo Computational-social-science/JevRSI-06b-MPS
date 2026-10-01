@@ -167,7 +167,13 @@ def gate_secrets(d: Decision) -> bool:
     rc, out = git("diff", "--cached", "--name-only")
     if rc != 0:
         d.reasons.append(f"git diff --cached failed: {out.strip()[:120]}")
+        d.may_publish = False
         return False
+    # Re-read the index rather than trusting a name from another scope. The count
+    # lives on `d` now, but the PATHS still have to come from somewhere, and
+    # hoisting them into `publish()` left this function referring to a variable
+    # that no longer existed here — a NameError on every healthy publish, which
+    # is the worst possible moment for a publisher to fall over.
     staged = [f for f in out.split() if f.strip()]
     d.staged = len(staged)
     import detectors as _det
@@ -191,7 +197,7 @@ def gate_secrets(d: Decision) -> bool:
                 d.reasons.append(f"{rel}:{i} looks like a credential — refusing to stage it")
                 d.may_publish = False
                 return False
-    d.notes.append(f"{len(staged)} staged path(s), no credential literals")
+    d.notes.append(f"{d.staged} staged path(s), no credential literals")
     return True
 
 
@@ -271,6 +277,13 @@ def publish(dry_run: bool = False, push: bool = False) -> Decision:
     git("add", "-A")
     rc, out = git("diff", "--cached", "--name-only")
     staged = [f for f in out.split() if f.strip()] if rc == 0 else []
+    # Populate the count HERE, not inside `gate_secrets`. It used to be set there,
+    # and `gate_secrets` is skipped whenever an earlier gate refuses — so every
+    # refusal reported `staged = 0`, and the CLI's "nothing to publish" branch
+    # swallowed it. The result was that a refusal exited 0, identically to a
+    # successful no-op: the one signal meant to distinguish "held back" from
+    # "nothing to do" was structurally incapable of firing.
+    d.staged = len(staged)
     if not staged:
         d.notes.append("nothing staged; the working tree matches the last commit")
         d.may_publish = False
@@ -454,4 +467,6 @@ if __name__ == "__main__":
     if r.may_publish:
         raise SystemExit(0)
     raise SystemExit(3)
+
+
 
