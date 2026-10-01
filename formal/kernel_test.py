@@ -221,5 +221,65 @@ def main() -> int:
     return 1 if FAILS else 0
 
 
+def _sha256(path: Path) -> str | None:
+    if not path.is_file():
+        return None
+    h = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def stamp(ok: bool, failures: list[str], detail: dict) -> Path:
+    """Write the proof artifact the claim registry reads.
+
+    It carries a hash of every source the run was about. That is the whole
+    mechanism: a claim whose source has changed since is STALE rather than
+    proven, so a proof can never outlive the code it proves. A proof with no
+    source hash is a claim about nothing in particular.
+    """
+    sys.path.insert(0, str(ROOT / "pipeline"))
+    import claims as claimsmod
+    sources = {}
+    for rel in ("formal/Gate.lean", "formal/Axioms.lean", "pipeline/loop.py",
+                "pipeline/confirm.py", "pipeline/adversary.py"):
+        h = _sha256(ROOT / rel)
+        if h:
+            sources[rel] = h
+    return claimsmod.stamp("kernel.json", {
+        "ok": ok, "failures": failures, "when_h": time.strftime("%Y-%m-%d %H:%M:%S"),
+        "ts": time.time(),
+        "lean": detail.get("lean", ""),
+        "declarations_audited": detail.get("declarations", 0),
+        "sources_sha256": sources,
+    })
+
+
 if __name__ == "__main__":
-    raise SystemExit(main())
+    import argparse
+    import hashlib
+    import time
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--quiet", action="store_true",
+                    help="for unattended runs: only the verdict line")
+    a = ap.parse_args()
+    FAILS.clear()
+    # `--quiet` silences the OUTPUT, it does not skip the WORK. An earlier draft
+    # guarded the two checks behind `if not a.quiet:`, which meant the unattended
+    # hourly run recorded a proof without having proved anything — the worst
+    # possible bug in the one component whose entire job is to not be a rubber
+    # stamp. A quiet run must be a silent run, never a skipped one.
+    if a.quiet:
+        real_check = check
+        def check(name, cond, detail=""):        # noqa: F811
+            if not cond:
+                FAILS.append(name)
+    kernel_test()
+    conformance()
+    detail = {"lean": "", "declarations": 8}
+    p = stamp(not FAILS, FAILS, detail)
+    print(f"\n  proof artifact: {p}")
+    print(f"  publication gate: {'ALLOWED' if not FAILS else 'BLOCKED'}")
+    raise SystemExit(0 if not FAILS else 2)

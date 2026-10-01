@@ -1,0 +1,15 @@
+{
+  "ok": true,
+  "failures": [],
+  "when_h": "2026-10-01 17:42:16",
+  "ts": 1790847736.4491332,
+  "lean": "",
+  "declarations_audited": 8,
+  "sources_sha256": {
+    "formal/Gate.lean": "ed37a439d6152d5570f7a511b227be08bcef57cfa2e5cf831bb8aea0bdf3d988",
+    "formal/Axioms.lean": "3eb0365695f43e7820ad87f8d38fde6cbd9c952efc7ce713007401c9d886ad84",
+    "pipeline/loop.py": "58b3845698c73651e00c52768c1f66f140a9eb2234ccf7a6ecb0e2c36c3f82ba",
+    "pipeline/confirm.py": "1ad4eab50d5b11a1c39c73dcf5e743b85d274f6cbccefe875e41e88defe52f66",
+    "pipeline/adversary.py": "5fe2c560619d6cf06f3f79f1b07fc5d1e655f2e69bc8d2441404c72b7ff94208"
+  }
+}

@@ -246,6 +246,48 @@ function chart(d){
   return s+"</svg>";
 }
 
+// The wiring: what feeds what, and where a chain is open. A 24/7 loop that is
+// alive but feeding a discarded artifact looks exactly like a working one, and
+// that is the failure this panel exists to make visible.
+const WIRE_CLS = { intact:"good", idle:"quiet", stale:"warn",
+                   dangling:"bad", orphaned:"bad", absent:"bad" };
+const WIRE_MARK = { intact:"connected", idle:"not needed now", stale:"stale",
+                    dangling:"DANGLING", orphaned:"ORPHANED", absent:"missing" };
+
+function wiring(d){
+  const w = d.wiring;
+  if (!w) return "";
+  const rows = (w.links||[]).map(l => {
+    const c = WIRE_CLS[l.status] || "quiet";
+    return `<tr>
+      <td class="name"><code>${esc(l.name)}</code>
+        <div class="dim">${esc((l.consumers&&l.consumers.length)?l.consumers.join(", "):"no consumer")}</div></td>
+      <td class="dim">${esc(l.producer)}</td>
+      <td class="dim">${esc(l.artifact)}</td>
+      <td><span class="pill ${c}">${esc((WIRE_MARK[l.status]||l.status))}</span>
+        <div class="dim" style="margin-top:2px">${esc((l.detail||"").slice(0,58))}</div></td>
+    </tr>`;}).join("");
+  const stages = (w.stages||[]).map(st => {
+    const n = (w.links||[]).filter(l=>l.stage===st).length;
+    const bad = (w.links||[]).filter(l=>l.stage===st && WIRE_CLS[l.status]==="bad").length;
+    return `<span class="pill ${bad?"bad":"good"}">${esc(st)} ${n}${bad?" · "+bad+" open":""}</span>`;
+  }).join(" ");
+  const human = (w.human_required||[]);
+  return `<div class="panel"><h2>Wiring
+      <span class="note">${Object.entries(w.counts||{}).map(([k,v])=>k+" "+v).join(" · ")}</span></h2>
+    <div style="margin-bottom:10px">${stages}</div>
+    <table><thead><tr><th>link</th><th>produced by</th><th>artifact</th><th>state</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    ${human.length ? `<div class="verdict bad" style="margin:12px 0 0">
+        <div class="mark"></div><div><div class="lab">needs a human — ${human.length} open link(s)</div>
+        <div class="why">${human.map(n=>esc(n)).join(" · ")} — an output nothing consumes is
+        not evidence, it is decoration. A fault would be fixed automatically; a design hole
+        is a decision, and decisions are the operator's.</div></div></div>`
+      : `<div class="note-sm">Every link either feeds a consumer or is a human-facing artifact.
+        Nothing is produced into the void.</div>`}
+  </div>`;
+}
+
 function banner(d){
   const doc=d.doctor;
   if(!doc) return `<div class="verdict bad"><div class="mark"></div><div>
@@ -398,7 +440,7 @@ function render(d){
         the domestic mirror; an explicit HF_ENDPOINT in the environment still
         wins">${esc(String(d.sources.hf_endpoint||"").replace(/^https?:\/\//,""))}</div>`:""}
     </div></div>
-  ${incons}${banner(d)}${cells}
+  ${incons}${banner(d)}${wiring(d)}${cells}
   <div class="grid g-32">${fig}${queue}</div>
   <div class="grid g-2">${arms}${health}</div>
   ${log}

@@ -99,6 +99,39 @@ def git(*args: str) -> tuple[int, str]:
 
 
 # ---------------------------------------------------------------- gate 1
+def gate_claims(d: Decision) -> None:
+    """Refuse to publish a scientific claim that is not currently proven.
+
+    This is the gate that makes the formal layer load-bearing rather than
+    decorative. A repository whose README says "the bar cannot descend" is making
+    a claim, and a claim is only worth what its proof is worth AT THE TIME OF
+    READING. So the claim registry is consulted here, on every publish, with no
+    human in the loop, and two things block:
+
+      * a registered claim with no proof at all — the sentence is being made
+        without anything behind it;
+      * a proof that predates the source it is about. A proof from last Tuesday
+        does not cover an edit made this morning; that is a formal report of a
+        measurement taken before the instrument was changed.
+
+    The Lean check itself is scheduled (com.research.rsijev.lean) and is NOT run
+    here: proving takes minutes, and a publisher that blocks for minutes every
+    thirty minutes is a publisher that gets turned off. The gate reads the last
+    proof, and the staleness clause is what makes "last proof" safe to read.
+    """
+    import claims as claimmod
+    s = claimmod.summary()
+    if not s["may_publish"]:
+        for c in s["claims"]:
+            if c["status"] != "proven":
+                d.reasons.append(
+                    f"claim '{c['name']}' is {c['status']}: {c['detail'][:100]}")
+        d.may_publish = False
+    else:
+        d.notes.append(f"{len(s['claims'])} claim(s) proven "
+                       f"({', '.join(sorted(s['counts']))})")
+
+
 def gate_science(d: Decision) -> None:
     """Refuse to publish from a wrong verdict, or with a halt standing."""
     import doctor
@@ -294,6 +327,7 @@ def publish(dry_run: bool = False, push: bool = False) -> Decision:
     fresh = [a for a in d.new_arms if a not in last]
 
     gate_science(d)
+    gate_claims(d)
     gate_records_parse(d)
     if d.may_publish:
         gate_secrets(d)
