@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790848699.444304,
-  "when_h": "2026-10-01 17:58:19",
+  "when": 1790849004.8727622,
+  "when_h": "2026-10-01 18:03:24",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 465s ago"
+            "last arm-log write 283s ago"
           ],
           "repair": ""
         }
@@ -352,13 +352,11 @@
   "minors": [],
   "diagnosis": "all auditors agree: the loop is running and the science it is running is the science we said we would run",
   "halt": {
-    "active": true,
-    "reason": "the loop is running but the SCIENCE is not: reproducible/C1. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
-    "since": 1790848652.581942,
-    "since_h": "2026-10-01 17:57:32",
-    "findings": [
-      "reproducible/C1"
-    ],
+    "active": false,
+    "reason": "",
+    "since": 0.0,
+    "since_h": "",
+    "findings": [],
     "unreadable": false
   },
   "repairs": [],

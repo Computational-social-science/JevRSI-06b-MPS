@@ -90,7 +90,7 @@ def main() -> int:
 
         # --- STEP 3: a confirmation that HOLDS crowns the arm
         conf_ok = ArmResult(arm="confirm__champion_base", axis="training", change="c",
-                            pooled_top1_candidate=float(_L.bar()) + 0.010,
+                            pooled_top1_candidate=0.600 + float(_L.bar()) + 0.010,
                             pooled_top1_control=0.600,
                             prereg=pre.to_json())
         p2, f2, _ = gate(conf_ok)

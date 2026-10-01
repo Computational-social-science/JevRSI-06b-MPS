@@ -88,8 +88,8 @@ def main() -> int:
     print("\nverdicts: one failed guard is a repair, two is a death")
     # A guard-target loss alone is exactly ONE failed guard, because the guard
     # carries the wider 0.030 tolerance instead of the 0.011 regression rule.
-    _, f1, _ = gate(arm(0.720, 0.600,
-                        cand={"td": 0.72, "mmlu_pro_guard": 0.50},
+    _, f1, _ = gate(arm(0.600 + B + 0.01, 0.600,
+                        cand={"td": 0.600 + B + 0.01, "mmlu_pro_guard": 0.50},
                         ctrl={"td": 0.60, "mmlu_pro_guard": 0.60}))
     check("clears the bar + forgets general knowledge -> 1 guard -> needs_repair",
           len(f1) == 1 and f1[0].startswith("guard:"), str(f1))
