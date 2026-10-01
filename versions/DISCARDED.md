@@ -71,6 +71,14 @@ a noise-free measurement system, implying a very high-powered design.
 * The three records were deleted rather than kept with a flag, because
   `power.analyse` derives the floor from every null in the log — keeping them
   would have silently contaminated the re-run floor with the same artifact.
+  **Correction, 2026-10-01 18:50: this was not fully true.** Two of the three
+  were removed; `records/null2/` survived the cleanup and sat in the records
+  directory for eight hours, holding a bit-identical copy of the seed-17 run
+  under a second arm name. It is written up as [D6](#d6--a-discarded-run-that-survived-its-own-discard);
+  the sentence above was believed because the fix had been made, and a fix that
+  has been made is easy to mistake for a fix that has been verified. The guard
+  tests added here checked the *specs* for distinct seeds, which is why the
+  leftover was invisible: nothing compared the artifacts to each other.
 * The held-out set was **not** spent during any of this, which is why the fix
   could be verified at no cost to the project's one independent check.
 
@@ -226,3 +234,80 @@ using it would have set the bar wrong in the most confident way available.
 The only thing it was for — proving that train → eval → gate → record → power →
 trajectory runs without a human — it did establish, and the proof is the
 `EXIT rc=0 wall=2563s` line and the four-guard rejection in the daemon log.
+
+---
+
+## D6 — a discarded run that survived its own discard
+
+**When:** run 2026-10-01 10:17, found 18:40, quarantined 18:52
+**Status:** discarded; the arm is being re-run at the seed its prediction named
+**Cost:** ~1.6 h of MPS already spent on the duplicate, plus the eight hours it
+sat in `records/` being wrong
+
+### What was measured
+
+`records/null2/` held a complete, valid-looking result: 2,000 questions, a
+contamination check, a final loss, a candidate score of 0.5310 against a control
+of 0.4645. Every field was populated. Compared with the `null_floor` record
+beside it:
+
+| | `null_floor` | `null2` |
+|---|---|---|
+| seed the prediction named | 17 | **37** |
+| seed actually run | 17 | **17** |
+| candidate | 0.5310 | 0.5310 |
+| final loss | 0.6331608295440674 | 0.6331608295440674 |
+| per-question rows (12 targets) | — | **bit-identical, 12/12** |
+
+Not similar. Identical, down to the last digit of the training loss.
+
+### Why it was wrong
+
+It is [D1](#d1--three-null-arms-that-were-three-copies-of-one-run) again, in the
+one place D1's fix did not reach. The proximate cause was fixed — the config no
+longer overrides an arm's own seed — but this run happened at 10:17, hours
+*before* that fix, and its output was never cleaned up. `daemon.log` line 47
+records the launch as `CONFIG ... seed=17`; the run completed at 11:54 with
+`RESULT null2 KEPT [PASS]` and `CHAMPION null2 @ top1=0.5310`. The champion slot
+was briefly held by a duplicate.
+
+It did not reach the noise floor, and that is luck rather than design: `power`
+derives from `arms.jsonl`, and this run never got a row there, so the floor was
+built from the three genuine seeds. The floor was right by accident.
+
+### Why it was invisible for eight hours
+
+D1's guard tests ask whether the *specs* name different seeds. They do — 17, 27,
+37, 47, four distinct values, all tests green. The defect was not in a spec; it
+was in a directory of finished artifacts that no test ever compared against each
+other. A pipeline whose guard tests read its intentions rather than its outputs
+will pass its own guard tests while the outputs are identical.
+
+Three gates now exist, and the third is the one that would have caught this:
+
+1. **The seed is preregistered.** `Prereg.seed`, written before the run.
+2. **The seed is checked, not trusted.** `run_one.py` refuses to start when the
+   spec it was handed disagrees with the preregistration. Negative-controlled:
+   a spec claiming seed 17 for `null2` exits 1 in under a second without loading
+   a model. This run would have been refused.
+3. **The artifacts are compared.** `tests/test_gates.py` hashes every
+   `records/*/**.rows.json` and fails if two arms are byte-identical. This is the
+   check that does not care what anything intended.
+
+Plus [V2](#) — "at most one arm runs at a time" — which was `ok=True` hardcoded,
+i.e. decoration, and which therefore could not see the two concurrent `null2`
+processes that occurred at 18:44 when a hand-started daemon and a `StartInterval`
+tick both fired. It is now a critical check with a negative control.
+
+### The transferable lesson
+
+**A discarded measurement left on disk is not a discarded measurement.** It is a
+trap with a JSON extension, and the reason it survived is the reason it was
+invisible: the cleanup was believed because the fix had been written down, and
+the guard tests written alongside that fix tested the thing the fix touched
+rather than the thing that had gone wrong.
+
+The general form: *when a fix is made, the check that would have caught the
+original failure must be a check on outputs, not on the intent the fix
+expressed.* Two of the three new gates read artifacts; the one that already
+existed read a spec.

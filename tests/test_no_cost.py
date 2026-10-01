@@ -52,6 +52,16 @@ METERED = re.compile(
     r"[A-Z_]*(KEY|TOKEN|SECRET)\b", re.I)
 # A key-shaped literal, not the NAME of a key-shaped thing.
 KEY_LITERAL = re.compile(r"sk-[A-Za-z0-9_-]{16,}|hf_[A-Za-z0-9]{24,}|AKIA[0-9A-Z]{16}")
+
+# The credential NAMES, and the only way our own code could come to depend on
+# one: reading it out of the environment. A pipeline that never reads a key
+# cannot accidentally start needing one, which is the property worth testing --
+# as opposed to whether the operator's shell happens to hold one today.
+KEY_NAMES = ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY",
+             "GOOGLE_API_KEY", "MISTRAL_API_KEY", "GROQ_API_KEY")
+ENV_READ = re.compile(
+    r"""(?:os\.)?(?:environ\.get|getenv)\s*\(\s*['"](?:%s)['"]""" % "|".join(KEY_NAMES)
+    + r"""|os\.environ\s*\[\s*['"](?:%s)['"]""" % "|".join(KEY_NAMES))
 # Any non-HuggingFace http(s) URL in runtime code.
 URL = re.compile(r"https?://([A-Za-z0-9.-]+)")
 # The domestic mirror is the project's declared default (see `dev.hf_endpoint`),
@@ -143,12 +153,62 @@ def main() -> int:
     else:
         check("config/run.json exists", False)
 
-    # No token in the environment is *required*: everything here works
-    # anonymously, so a token must never be necessary.
-    env_keys = [k for k in ("OPENAI_API_KEY", "ANTHROPIC_API_KEY", "OPENROUTER_API_KEY")
-                if k in __import__("os").environ]
-    check("no provider credential is even present in this environment",
-          not env_keys, ", ".join(env_keys))
+    # The pipeline's OWN environment, not the operator's.
+    #
+    # This used to assert that no provider credential exists in the environment of
+    # whoever happens to run the test, and it was true or false depending on who
+    # that was: it passed from an interactive shell and failed under the background
+    # runner, which passes ANTHROPIC_API_KEY through for its own reasons. A guard
+    # whose verdict depends on the operator's shell is not a guard on the project,
+    # and one that cries wolf on a healthy checkout is the fastest way to teach a
+    # reader to ignore the panel.
+    #
+    # What is actually true, and worth enforcing, is narrower and checkable:
+    #   * the pipeline declares no credential of its own -- not in config, and not
+    #     in the launchd plists that are how it actually gets an environment at
+    #     runtime (launchd does not inherit a shell, so the plists ARE the
+    #     pipeline's environment);
+    #   * no code path reads one;
+    #   * and the model is an open-weights one, so a token is never *required*.
+    plist_env: list[str] = []
+    for pl in sorted(Path.home().joinpath("Library/LaunchAgents").glob("com.research.rsijev*.plist")):
+        txt = pl.read_text(errors="ignore")
+        for key in KEY_NAMES:
+            if key in txt:
+                plist_env.append(f"{pl.name}: {key}")
+    check("the launchd plists declare no provider credential "
+          "(they ARE this pipeline's runtime environment)",
+          not plist_env, "; ".join(plist_env[:3]) or
+          f"{len(list(Path.home().joinpath('Library/LaunchAgents').glob('com.research.rsijev*.plist')))} plist(s) clean")
+
+    readers: list[str] = []
+    for p in files:
+        if p.name in DETECTORS:
+            continue
+        for i, line in enumerate(p.read_text(errors="ignore").splitlines(), 1):
+            if line.lstrip().startswith("#"):
+                continue
+            if ENV_READ.search(line):
+                readers.append(f"{p.relative_to(ROOT)}:{i}: {line.strip()[:70]}")
+    check("no code path reads a provider credential from the environment",
+          not readers, "; ".join(readers[:3]) or
+          "nothing reads *_API_KEY, so nothing can accidentally depend on one")
+
+    # The negative control, because a guard nobody has seen fire is decoration.
+    # Plant the exact violation the two checks above exist to catch, in a scratch
+    # copy, and confirm the detector sees it.
+    import tempfile
+    with tempfile.TemporaryDirectory() as td:
+        planted = Path(td) / "planted.py"
+        planted.write_text("import os\nKEY = os.environ['OPENAI_API_KEY']\n")
+        blob = planted.read_text()
+        check("... and the detector is negative-controlled (a planted "
+              "credential read is caught)",
+              bool(ENV_READ.search(blob)),
+              "planted os.environ['OPENAI_API_KEY'] must match ENV_READ, or the "
+              "check above is vacuous")
+    print("    ^ a token is never required: the backbone is open-weights and the "
+          "hub is read anonymously")
 
     print("\ncost ledger for one arm, measured on this machine:")
     cost = ROOT / "state" / "cost.json"
