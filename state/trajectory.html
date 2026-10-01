@@ -56,7 +56,7 @@ the absence of a measurement, drawn at the floor because scoring it zero would c
 the axis.</div>
 <div id="app"></div>
 <script>
-const DATA = {"series": [{"arm": "null_floor", "role": "", "delta": 0.0665, "keep": false, "discard": true, "crash": false, "confirmations": [{"arm": "confirm__null_floor", "delta": 0.04349999999999998, "keep": false}]}, {"arm": "null1", "role": "calibration", "delta": 0.09399999999999997, "keep": false, "discard": true, "crash": false, "confirmations": []}], "n_keep": 0, "n_discard": 2, "n_crash": 0, "n_arms": 2, "start": 0.0665, "top": 0.09399999999999997, "ckpt_gb": 0.0, "bar": 0.104296, "generated_h": "2026-10-01 18:47:46"};
+const DATA = {"series": [{"arm": "null_floor", "role": "", "delta": 0.0665, "keep": false, "discard": true, "crash": false, "confirmations": [{"arm": "confirm__null_floor", "delta": 0.04349999999999998, "keep": false}]}, {"arm": "null1", "role": "calibration", "delta": 0.09399999999999997, "keep": false, "discard": true, "crash": false, "confirmations": []}, {"arm": "null2", "role": "calibration", "delta": 0.0665, "keep": false, "discard": true, "crash": false, "confirmations": []}], "n_keep": 0, "n_discard": 3, "n_crash": 0, "n_arms": 3, "start": 0.0665, "top": 0.09399999999999997, "ckpt_gb": 0.0, "bar": 0.09728, "generated_h": "2026-10-01 20:24:29"};
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));

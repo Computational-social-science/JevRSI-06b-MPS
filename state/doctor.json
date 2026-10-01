@@ -1,8 +1,8 @@
 {
   "verdict": "wrong",
   "ok": false,
-  "when": 1790852534.906538,
-  "when_h": "2026-10-01 19:02:14",
+  "when": 1790858979.216624,
+  "when_h": "2026-10-01 20:49:39",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -28,7 +28,7 @@
           "severity": "critical",
           "detail": "two arms writing the same records/<arm>/ and ckpt/<arm>/ at once is the duplicate-measurement failure this project has already paid for once -- two arm names, one run, left in records/ where a reader takes them for points of a spread. This check was hardcoded ok=True and therefore blind to exactly that: two null2 processes were live for 20 minutes on 2026-10-01 and this panel could not see them.",
           "evidence": [
-            "arm pids: ['16955']"
+            "arm pids: none"
           ],
           "repair": ""
         },
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 648s ago"
+            "last arm-log write 1532s ago"
           ],
           "repair": ""
         }
@@ -100,9 +100,9 @@
           "title": "every result has a prediction registered before it",
           "ok": true,
           "severity": "critical",
-          "detail": "3 result(s), all preregistered",
+          "detail": "4 result(s), all preregistered",
           "evidence": [
-            "3 results, 9 preregs"
+            "4 results, 9 preregs"
           ],
           "repair": ""
         },
@@ -113,7 +113,7 @@
           "severity": "major",
           "detail": "none dangling",
           "evidence": [
-            "in flight: null2"
+            "in flight: None"
           ],
           "repair": ""
         },
@@ -152,8 +152,8 @@
           "severity": "info",
           "detail": "declared",
           "evidence": [
-            "3 null arms, measured paired sd 0.0253",
-            "bar +0.1043"
+            "4 null arms, measured paired sd 0.0207",
+            "bar +0.0973"
           ],
           "repair": ""
         },
@@ -161,11 +161,10 @@
           "invariant": "I6",
           "title": "the queue is obeyed",
           "ok": true,
-          "severity": "major",
+          "severity": "info",
           "detail": "in order",
           "evidence": [
-            "queue head: null2",
-            "in flight : null2"
+            "idle; next up would be null3"
           ],
           "repair": ""
         },
@@ -206,7 +205,7 @@
           "severity": "critical",
           "detail": "verified per arm",
           "evidence": [
-            "3 arm(s) all checked"
+            "4 arm(s) all checked"
           ],
           "repair": ""
         },
@@ -281,11 +280,12 @@
           "title": "every delta follows from its own candidate and control",
           "ok": true,
           "severity": "info",
-          "detail": "3 checks agree; first: null_floor: delta not recorded, pooled pair is self-consistent",
+          "detail": "4 checks agree; first: null_floor: delta not recorded, pooled pair is self-consistent",
           "evidence": [
             "no champion_delta recorded; pooled candidate - control = +0.066500",
             "no champion_delta recorded; pooled candidate - control = +0.043500",
-            "no champion_delta recorded; pooled candidate - control = +0.094000"
+            "no champion_delta recorded; pooled candidate - control = +0.094000",
+            "no champion_delta recorded; pooled candidate - control = +0.066500"
           ],
           "repair": ""
         },
@@ -296,8 +296,8 @@
           "severity": "info",
           "detail": "the control is shared by every arm",
           "evidence": [
-            "1 distinct control value(s) across 3 arm(s)",
-            "control 0.464500: null_floor, confirm__null_floor, null1"
+            "1 distinct control value(s) across 4 arm(s)",
+            "control 0.464500: null_floor, confirm__null_floor, null1, null2"
           ],
           "repair": ""
         },
@@ -308,10 +308,10 @@
           "severity": "info",
           "detail": "the bar follows from the rule",
           "evidence": [
-            "null deltas fed back in: [0.0665, 0.04349999999999998, 0.09399999999999997]",
+            "null deltas fed back in: [0.0665, 0.04349999999999998, 0.09399999999999997, 0.0665]",
             "at planned_seeds=3, fallback_sd=0.011",
-            "re-derived recommended_bar 0.104296",
-            "recorded  recommended_bar 0.104296",
+            "re-derived recommended_bar 0.097280",
+            "recorded  recommended_bar 0.097280",
             "champion delta (none)"
           ],
           "repair": ""
@@ -323,8 +323,8 @@
           "severity": "info",
           "detail": "the measured floor is the null arms' own spread",
           "evidence": [
-            "3 null deltas: +0.0665, +0.0435, +0.0940",
-            "recomputed sample sd 0.025283 vs recorded paired_sd 0.025283"
+            "4 null deltas: +0.0665, +0.0435, +0.0940, +0.0665",
+            "recomputed sample sd 0.020657 vs recorded paired_sd 0.020657"
           ],
           "repair": ""
         }
@@ -343,7 +343,7 @@
           "title": "the RUNNING loop uses the science currently on disk",
           "ok": false,
           "severity": "critical",
-          "detail": "the loop is gating with modules older than the ones on disk: pipeline/loop.py edited after daemon.py (pid 16901) started; pipeline/loop.py edited after run_one.py (pid 16955) started; pipeline/loop.py edited after dashboard.py (pid 17975) started",
+          "detail": "the loop is gating with modules older than the ones on disk: pipeline/power.py edited after watchdog.py (pid 21114) started; pipeline/loop.py edited after watchdog.py (pid 21114) started; pipeline/power.py edited after dashboard.py (pid 23147) started",
           "evidence": [],
           "repair": "restart the daemon so the corrected gate takes effect; the arm in flight is left to finish"
         },
@@ -370,8 +370,8 @@
   "halt": {
     "active": true,
     "reason": "the loop is running but the SCIENCE is not: reproducible/C2. This is the dangerous class \u2014 it keeps running and keeps publishing numbers that violate the protocol, which is why it outranks a dead process in this report.",
-    "since": 1790852534.907145,
-    "since_h": "2026-10-01 19:02:14",
+    "since": 1790854338.778909,
+    "since_h": "2026-10-01 19:32:18",
     "findings": [
       "reproducible/C2"
     ],
@@ -382,7 +382,7 @@
       "finding": "reproducible/C2",
       "action": "restart the daemon so the corrected gate takes effect; the arm in flight is left to finish",
       "safe_unattended": true,
-      "detail": "the loop is gating with modules older than the ones on disk: pipeline/loop.py edited after daemon.py (pid 16901) started; pipeline/loop.py edited after run_one.py (pid 16955) started; pipeline/loop.py edited after dashboard.py (pid 17975) started"
+      "detail": "the loop is gating with modules older than the ones on disk: pipeline/power.py edited after watchdog.py (pid 21114) started; pipeline/loop.py edited after watchdog.py (pid 21114) started; pipeline/power.py edited after dashboard.py (pid 23147) started"
     }
   ],
   "needs_human": false

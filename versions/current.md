@@ -1,6 +1,6 @@
 # RSI-Jev on Qwen3-0.6B — research record
 
-*Generated 2026-10-01 18:47:50 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
+*Generated 2026-10-01 20:24:29 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
 *`state/champions.jsonl`. Not maintained by hand: it cannot drift from the*
 *data, because it is a projection of the data.*
 
@@ -54,20 +54,20 @@ pooled with a CUDA one.
 
 ## 4. Power — what this setup could have seen
 
-Measured from **3 null arms** (arms identical to the control, so their spread is
-the noise floor): sd = **0.0253**.
+Measured from **4 null arms** (arms identical to the control, so their spread is
+the noise floor): sd = **0.0207**.
 
 | seeds | minimum detectable effect |
 |---|---|
-| 2 | 0.0445 |
-| 3 | 0.0363 |
-| 4 | 0.0314 |
-| 5 | 0.0281 |
-| 6 | 0.0257 |
-| 7 | 0.0238 |
-| 8 | 0.0222 |
+| 2 | 0.0363 |
+| 3 | 0.0297 |
+| 4 | 0.0257 |
+| 5 | 0.0230 |
+| 6 | 0.0210 |
+| 7 | 0.0194 |
+| 8 | 0.0182 |
 
-**Bar in force: +0.1043.**
+**Bar in force: +0.0973.**
 
 Of the effects upstream reports, this design could detect: upstream_data_train_split.
 
@@ -92,7 +92,7 @@ Upstream spent 24 arms learning that. The first arm here is a null arm for exact
 
 ### The agenda, ordered by what this design can resolve
 
-Minimum detectable effect at the planned budget: **0.1043**. An arm's *role* is decided from its expected effect against that number, **before** it runs — never from what it produced. That is what stops a null from being read as a refutation when the design could not have seen one.
+Minimum detectable effect at the planned budget: **0.0973**. An arm's *role* is decided from its expected effect against that number, **before** it runs — never from what it produced. That is what stops a null from being read as a refutation when the design could not have seen one.
 
 | role | meaning | seed budget | arms |
 |---|---|---|---|
@@ -104,14 +104,16 @@ The order is derived from the power analysis, not hand-written, so a change in t
 
 ## 6. Results
 
-3 arms: **0 kept**, 0 published negatives, 1 needing repair, 0 errors.
+4 arms: **0 kept**, 0 published negatives, 2 needing repair, 0 errors.
 
 | arm | role | Δ vs control | expected | bar | contamination | verdict |
 |---|---|---|---|---|---|---|
 | `null_floor` | — | +0.0665 | +0.0000 | ? | verified retroactively: clean: 7414 tr | kept_pending_confirm |
 | `confirm__null_floor` | exploratory | +0.0435 | +0.0665 | ? | clean | not_confirmed *(underpowered)* |
 | `null1` | calibration | +0.0940 | +0.0000 | ? | clean | needs_repair |
+| `null2` | calibration | +0.0665 | +0.0000 | +0.1043 | clean | needs_repair |
 
+**Gated at a superseded bar.** The bar now in force is +0.0973 (do_nothing_mean + resolvable increment); these rows were decided at `null2` +0.1043. Their verdicts stand as recorded — the measurement did not change — but they are not comparable to rows gated at the current bar, and the honest reading of a keeper among them is 'cleared a bar that doing nothing also cleared'.
 **3 row(s) predate the `bar` column** (`null_floor`, `confirm__null_floor`, `null1`): the record cannot say which bar decided them. Treat those verdicts as unverified against any bar.
 
 ## 7. Reference points
@@ -148,7 +150,7 @@ _Qwen3.5-2B tower on an NVIDIA GB10. Context only. A 0.6B tower is ~3.3x smaller
 
 ## 10. Discarded measurements
 
-**5 measurement(s) were taken, found invalid, and thrown away.** They are written up in [`DISCARDED.md`](DISCARDED.md), because upstream's rule is that the record is the evidence — "failures ship, including the ones that killed our own champion" — and a failure that leaves no trace is indistinguishable from one that never happened.
+**6 measurement(s) were taken, found invalid, and thrown away.** They are written up in [`DISCARDED.md`](DISCARDED.md), because upstream's rule is that the record is the evidence — "failures ship, including the ones that killed our own champion" — and a failure that leaves no trace is indistinguishable from one that never happened.
 
 The most instructive: three null arms that turned out to be three copies of a single run, because a config value had overridden the per-arm seed. They returned a **measured noise sd of exactly 0.0000** and set the bar at +0.0110. A noise-free measurement system would have been a remarkable finding; it was a bug, and the giveaway was that the sd was *exactly* zero.
 

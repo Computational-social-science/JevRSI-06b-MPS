@@ -134,6 +134,30 @@ def null_deltas(records) -> list[float]:
     return out
 
 
+def null_guard_deltas(records) -> list[float]:
+    """The general-knowledge guard's deltas over the null series, and nothing else.
+
+    Same membership test as `null_deltas` — one definition, so the two series can
+    never describe different arms — but a different target. This is the spread
+    that decides whether the recipe is ADMISSIBLE, and at 0.6B it is larger than
+    the tolerance it is being compared against, so it has to be measured rather
+    than assumed. See `loop.gate` guard 3 for what is done with it.
+    """
+    import loop as _loop
+    out: list[float] = []
+    for r in records or ():
+        if not is_null_series(str(r.get("arm", ""))):
+            continue
+        cand = r.get("per_target_top1") or {}
+        ctrl = r.get("per_target_top1_control") or {}
+        for tname, ctv in cand.items():
+            if not _loop._is_guard(tname) or ctrl.get(tname) is None:
+                continue
+            out.append(float(ctv) - float(ctrl[tname]))
+            break
+    return out
+
+
 def _role_for(arm_name: str, expected: float) -> str:
     """Decided by the design, before any run, and never by the outcome.
 

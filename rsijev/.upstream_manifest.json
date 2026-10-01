@@ -1,0 +1,262 @@
+{
+ "upstream": "https://github.com/Shanghua-Gao/RSI-Jev",
+ "vendored_at": "4a2b2b47d6b8c58ecb1ec5e1bef927eb28f91b14",
+ "vendored_at_date": "2026-09-29",
+ "provenance_proof": "rsijev/arch.py, rsijev/encode.py and rsijev/contract.py are unpatched, and all three git blob shas equal this commit's. That is how the pin was found: by matching bytes, not by trusting a date.",
+ "added_from_main": "56afe9187f4be2c6628e5c4544049c97a070d1d2",
+ "blob_algorithm": "git blob sha1 = sha1(\"blob <len>\\0\" + bytes), the id `git hash-object` produces",
+ "rule": "Every file upstream had at the pin must be present here and byte-identical, unless it is listed with a state and a reason. A file that is neither is a defect, not a detail: it means a number in this project was produced by code that is not in this tree.",
+ "states": {
+  "verbatim": "byte-identical to the pin",
+  "ours": "we changed it, and the change is declared",
+  "added": "fetched from upstream main on 2026-10-01, ahead of the pin",
+  "absent": "deliberately not vendored, with the reason given",
+  "project": "this project's own file, with no upstream counterpart"
+ },
+ "files": {
+  "rsijev/README.md": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "rsijev/__init__.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "553958f4259e0e7037e18a16bf6982cec1201933"
+  },
+  "rsijev/arch.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "e751db28850c335004190fe64a2b00ea03889d6f"
+  },
+  "rsijev/calibrate.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "a06e96b24f644bc8dc27ad5bba37915b71715854"
+  },
+  "rsijev/contract.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "a059b95dfac3da946264a1bb7faa5cf47dbd06f7"
+  },
+  "rsijev/data.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "b72cf98bf332332446caf219cddf711fb3ea9ed8"
+  },
+  "rsijev/encode.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "62593315d09176d4b4b76c343f61bf8dcffe3733"
+  },
+  "rsijev/evaluate.py": {
+   "status": "vendored",
+   "state": "ours",
+   "blob": "e60fd2620f58a7c38ff8ca02590d9af97ecaf267",
+   "upstream_blob": "c1a2948e3fd0ccdbcfcc16391b7254290f8a8aaa",
+   "patch": "one performance line: per-row .tolist() -> one .cpu() per batch, because on Apple MPS each per-row copy calls MPSStream::synchronize. Marked `# LOCAL PERF PATCH (not upstream)` in the file and proven bit-identical by tests/test_eval_parity.py against the original expression."
+  },
+  "rsijev/fit.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "309962a3a6cdccf05fbf96534c4e395982ca5b51"
+  },
+  "rsijev/metrics.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "0a04364a55144b40e7b958b7f872bdc48b362552"
+  },
+  "rsijev/rl2.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "2347cf924adcccc281b1efea5b6123b794cf4219"
+  },
+  "rsijev/targets.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "de02d6ebbc5ca6804ce6ff829690cdeadcea96f6"
+  },
+  "rsijev/targets_suite.py": {
+   "status": "vendored",
+   "state": "added",
+   "from_commit": "56afe9187f4be2c6628e5c4544049c97a070d1d2",
+   "note": "added 2026-10-01 from upstream main; AHEAD of the tree pin, because the 15-benchmark suite machinery and the replay-corpus builder were missing and are exactly what this project was hand-rolling instead",
+   "blob": "92e9a341c08bb82f9b3b3e0d160f786575b5933c"
+  },
+  "rsijev/train.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "13d53b4f0a4c3816326986c99ed8d187e1d0e296"
+  },
+  "scripts/bench.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/bench_inference.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/build_corpus.py": {
+   "status": "absent",
+   "reason": "upstream builds the generalist corpus from public classification sources; this project replicates the typed-decisions lineage, whose corpus comes from build_synth_corpus.py. Our own builder is scripts/build_replication_corpus.py -- it used to be NAMED build_corpus.py, which made our file impersonate an upstream one."
+  },
+  "scripts/build_ds2_addons.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/build_examples.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/build_hippo_rr.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/build_rl2_sources.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/build_specialist_corpus.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/build_specialist_replay_corpus.py": {
+   "status": "vendored",
+   "state": "added",
+   "from_commit": "56afe9187f4be2c6628e5c4544049c97a070d1d2",
+   "note": "added 2026-10-01 from upstream main; AHEAD of the tree pin, because the 15-benchmark suite machinery and the replay-corpus builder were missing and are exactly what this project was hand-rolling instead",
+   "blob": "c78b671fac8e867c135ddf3242532f71125c0268"
+  },
+  "scripts/build_suite_train_corpus.py": {
+   "status": "vendored",
+   "state": "added",
+   "from_commit": "56afe9187f4be2c6628e5c4544049c97a070d1d2",
+   "note": "added 2026-10-01 from upstream main; AHEAD of the tree pin, because the 15-benchmark suite machinery and the replay-corpus builder were missing and are exactly what this project was hand-rolling instead",
+   "blob": "9d1b1e0de15c991efc15305bfffb9a8e4102154f"
+  },
+  "scripts/build_synth_corpus.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "92c5a0e27ef8488f1b7c0ce1370cd83167460834"
+  },
+  "scripts/calibration.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/check_release_records.py": {
+   "status": "vendored",
+   "state": "added",
+   "from_commit": "56afe9187f4be2c6628e5c4544049c97a070d1d2",
+   "note": "added 2026-10-01 from upstream main; AHEAD of the tree pin, because the 15-benchmark suite machinery and the replay-corpus builder were missing and are exactly what this project was hand-rolling instead",
+   "blob": "abdeab1c476c0acb4acc031784d7f4530fb43937"
+  },
+  "scripts/corpus_gate.py": {
+   "status": "vendored",
+   "state": "added",
+   "from_commit": "56afe9187f4be2c6628e5c4544049c97a070d1d2",
+   "note": "added 2026-10-01 from upstream main; AHEAD of the tree pin, because the 15-benchmark suite machinery and the replay-corpus builder were missing and are exactly what this project was hand-rolling instead",
+   "blob": "7a3c8f028d4bb34a7e7f23e5c77b28d899a259cc"
+  },
+  "scripts/corpus_reference_stats.json": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/demo_web.py": {
+   "status": "absent",
+   "reason": "v4.0-VL vision lineage and the serving surface: a different model and a different claim. Out of scope for a text-only 0.6B replication."
+  },
+  "scripts/fit_release_calibration.py": {
+   "status": "absent",
+   "reason": "Fits a RELEASE calibration head. Out of scope: this project replicates the method at 0.6B and never publishes a release. It also imports rsijev.vision, so vendoring it is what dragged the vision lineage in."
+  },
+  "scripts/load_release.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "22396ec9faf3138debeb431c113887bcbc1b8de7"
+  },
+  "scripts/padding_invariance.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/release_train.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/rerank_common.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/routing.py": {
+   "status": "absent",
+   "reason": "not on the text-only replication path; listed so its absence reads as a decision rather than an oversight"
+  },
+  "scripts/run_arm_lib.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "05275b6d2511ef5e499d28abae552cc562f82b75"
+  },
+  "scripts/serve.py": {
+   "status": "absent",
+   "reason": "v4.0-VL vision lineage and the serving surface: a different model and a different claim. Out of scope for a text-only 0.6B replication."
+  },
+  "scripts/serve_smoke.py": {
+   "status": "absent",
+   "reason": "v4.0-VL vision lineage and the serving surface: a different model and a different claim. Out of scope for a text-only 0.6B replication."
+  },
+  "scripts/suite.py": {
+   "status": "vendored",
+   "state": "verbatim",
+   "blob": "50e6d942e9cff457eb84b09d2cfdf5023b873c9a"
+  },
+  "rsijev/vision.py": {
+   "status": "absent",
+   "state": "added",
+   "blob": "de02d6ebbc5ca6804ce6ff829690cdeadcea96f6"
+  },
+  "rsijev/vision_fit.py": {
+   "status": "absent",
+   "reason": "as rsijev/vision.py"
+  },
+  "scripts/build_replication_corpus.py": {
+   "status": "project",
+   "state": "project",
+   "blob": "a0f96d924fe648933ddb024f286ec9f399b86457",
+   "note": "THIS PROJECT'S, not upstream's. A wrapper over upstream's build_synth_corpus.py adding --max-cases and a sha256 manifest. It was previously NAMED scripts/build_corpus.py, which made our file impersonate an upstream one; renamed 2026-10-01 and upstream's real build_corpus.py recorded absent."
+  },
+  "scripts/install_launchd.py": {
+   "status": "project",
+   "state": "project",
+   "blob": "5ede4c92ade2d568fb3110a1b3a8286f493e75df",
+   "note": "THIS PROJECT'S: the launchd installer. Upstream ships no unattended harness."
+  },
+  "scripts/install_dashboard.py": {
+   "status": "project",
+   "state": "project",
+   "blob": "5fa15cb6b5fcac0654e4f284d18a1b8eeca987ed",
+   "note": "THIS PROJECT'S: the dashboard installer. Upstream ships no dashboard."
+  },
+  "scripts/fetch.sh": {
+   "status": "project",
+   "state": "project",
+   "blob": "b0ba73ec1b450ed5ba3acdf48f1ab62b7efe7124",
+   "note": "THIS PROJECT'S: local fetch helper."
+  }
+ },
+ "scope": {
+  "rule": "The vendor surface is the running path and nothing wider. A file is vendored because THIS project runs it, cites its numbers, or cannot import without it -- never because it exists upstream.",
+  "in": [
+   "rsijev/* -- the training and evaluation core this project trains and scores with",
+   "scripts/suite.py + rsijev/targets_suite.py -- upstream's weighted 15-benchmark mean, which is the answer to a defect this project was hand-rolling around (a bar on one benchmark)",
+   "scripts/build_synth_corpus.py + scripts/build_replication_corpus.py -- the corpus, and the record of its bytes",
+   "scripts/build_specialist_replay_corpus.py -- upstream's 15% general-knowledge replay builder",
+   "scripts/corpus_gate.py + scripts/build_suite_train_corpus.py -- upstream's decontamination gate, replacing a reimplementation of it",
+   "scripts/check_release_records.py -- upstream's path-leak guard, which they record as having failed 13 times"
+  ],
+  "out": [
+   "the whole v4.0-VL vision lineage",
+   "the serving surface (serve.py, demo_web.py)",
+   "the RL2/vision corpus builders (build_rl2_*, build_vision_*, build_depthdial)",
+   "release_train.py, routing.py, bench.py -- inference-time and release-time, not search-time"
+  ],
+  "why": "Unused vendored code is not free. It has to be kept in step, a broken import in it is a defect this project has to triage, and a large vendored tree implies coverage this project does not have. A narrow vendor surface that is exactly true is worth more than a broad one that is approximately true."
+ }
+}

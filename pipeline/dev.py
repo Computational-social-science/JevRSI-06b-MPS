@@ -87,7 +87,7 @@ def describe_sources() -> dict:
         "hf_endpoint": hf_endpoint(),
         "hf_endpoint_default": _MIRROR,
         "hf_endpoint_is_default": os.environ.get("HF_ENDPOINT", "") == _MIRROR,
-        "corpus_builder": cfg.get("corpus_builder", "scripts/build_corpus.py"),
+        "corpus_builder": cfg.get("corpus_builder", "scripts/build_replication_corpus.py"),
         "model": cfg.get("model", ""),
     }
 

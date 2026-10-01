@@ -1,1 +1,49 @@
-{"n_null_arms": 3, "null_deltas": [0.0665, 0.04349999999999998, 0.09399999999999997], "noise_sd": 0.025283393759541056, "noise_max_abs": 0.09399999999999997, "do_nothing_mean": 0.06799999999999999, "paired_sd": 0.025283393759541056, "mde": {"1": null, "2": 0.044454, "3": 0.036296, "4": 0.031434, "5": 0.028115, "6": 0.025665, "7": 0.023762, "8": 0.022227}, "recommended_bar": 0.104296, "planned_seeds": 3, "fallback_sd": 0.011, "reference_effects": {"upstream_data_train_split": 0.12, "upstream_replay_15pct": 0.017, "upstream_lower_layers_slow": 0.02, "upstream_mlp_combine": 0.002, "upstream_wider_coverage": 0.011, "upstream_best_of_24_arms": 0.0035, "upstream_data_axis_worst": 0.0015}, "detectable": {"upstream_data_train_split": true, "upstream_replay_15pct": false, "upstream_lower_layers_slow": false, "upstream_mlp_combine": false, "upstream_wider_coverage": false, "upstream_best_of_24_arms": false, "upstream_data_axis_worst": false}, "verdict": "null arms: 3\n    measured noise sd: 0.0253\n    paired sd used:     0.0253\n    doing nothing buys: +0.0680\n    MDE by seed budget: 2s=0.0445, 3s=0.0363, 4s=0.0314, 5s=0.0281, 6s=0.0257, 7s=0.0238, 8s=0.0222\n    bar at 3 seeds: +0.1043  [do_nothing_mean + resolvable increment]\n    detectable: ['upstream_data_train_split']\n    NOT detectable: ['upstream_replay_15pct', 'upstream_lower_layers_slow', 'upstream_mlp_combine', 'upstream_wider_coverage', 'upstream_best_of_24_arms', 'upstream_data_axis_worst']", "can_refute": false, "note_scale": "every null here is a null AT 0.6B on MPS; it is consistent with both 'upstream's effect was never real' and 'the effect is real and smaller at this scale', and this design cannot distinguish those", "bar_rationale": "set ABOVE what doing nothing buys, not at the resolution limit. The 3 null arm(s) are replicas of the champion recipe, so they train: their mean delta +0.0680 is the gain every hypothesis arm receives for free. A bar at the detectable minimum (0.0370) sits BELOW that and would be cleared by an arm that changed nothing at all \u2014 which is exactly what happened before this rule. The bar is therefore the do-nothing mean plus the increment resolvable at 3 seed(s) (0.0363).", "bar_rule": "do_nothing_mean + resolvable increment"}
+{
+  "n_null_arms": 4,
+  "null_deltas": [
+    0.0665,
+    0.04349999999999998,
+    0.09399999999999997,
+    0.0665
+  ],
+  "noise_sd": 0.020657424008493082,
+  "noise_max_abs": 0.09399999999999997,
+  "do_nothing_mean": 0.06762499999999999,
+  "paired_sd": 0.020657424008493082,
+  "mde": {
+    "1": null,
+    "2": 0.03632,
+    "3": 0.029655,
+    "4": 0.025682,
+    "5": 0.022971,
+    "6": 0.02097,
+    "7": 0.019414,
+    "8": 0.01816
+  },
+  "recommended_bar": 0.09728,
+  "planned_seeds": 3,
+  "fallback_sd": 0.011,
+  "reference_effects": {
+    "upstream_data_train_split": 0.12,
+    "upstream_replay_15pct": 0.017,
+    "upstream_lower_layers_slow": 0.02,
+    "upstream_mlp_combine": 0.002,
+    "upstream_wider_coverage": 0.011,
+    "upstream_best_of_24_arms": 0.0035,
+    "upstream_data_axis_worst": 0.0015
+  },
+  "detectable": {
+    "upstream_data_train_split": true,
+    "upstream_replay_15pct": false,
+    "upstream_lower_layers_slow": false,
+    "upstream_mlp_combine": false,
+    "upstream_wider_coverage": false,
+    "upstream_best_of_24_arms": false,
+    "upstream_data_axis_worst": false
+  },
+  "verdict": "null arms: 4\n    measured noise sd: 0.0207\n    paired sd used:     0.0207\n    doing nothing buys: +0.0676\n    MDE by seed budget: 2s=0.0363, 3s=0.0297, 4s=0.0257, 5s=0.0230, 6s=0.0210, 7s=0.0194, 8s=0.0182\n    bar at 3 seeds: +0.0973  [do_nothing_mean + resolvable increment]\n    detectable: ['upstream_data_train_split']\n    NOT detectable: ['upstream_replay_15pct', 'upstream_lower_layers_slow', 'upstream_mlp_combine', 'upstream_wider_coverage', 'upstream_best_of_24_arms', 'upstream_data_axis_worst']",
+  "can_refute": false,
+  "note_scale": "every null here is a null AT 0.6B on MPS; it is consistent with both 'upstream's effect was never real' and 'the effect is real and smaller at this scale', and this design cannot distinguish those",
+  "bar_rationale": "set ABOVE what doing nothing buys, not at the resolution limit. The 4 null arm(s) are replicas of the champion recipe, so they train: their mean delta +0.0676 is the gain every hypothesis arm receives for free. A bar at the detectable minimum (0.0300) sits BELOW that and would be cleared by an arm that changed nothing at all \u2014 which is exactly what happened before this rule. The bar is therefore the do-nothing mean plus the increment resolvable at 3 seed(s) (0.0297).",
+  "bar_rule": "do_nothing_mean + resolvable increment"
+}

@@ -79,7 +79,7 @@ def main() -> int:
         [sys.executable, "-c",
          "import runpy, os, sys;"
          "sys.argv=['build_corpus.py'];"
-         "\ntry:\n runpy.run_path('scripts/build_corpus.py', run_name='not_main')\n"
+         "\ntry:\n runpy.run_path('scripts/build_replication_corpus.py', run_name='not_main')\n"
          "except SystemExit:\n pass\n"
          "print('ENDPOINT=' + os.environ.get('HF_ENDPOINT',''))"],
         cwd=ROOT, capture_output=True, text=True, env=env, timeout=120)

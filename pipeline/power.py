@@ -109,6 +109,14 @@ class PowerResult:
     # receives for free, before its own change has done anything. A bar that
     # ignores this is a bar that any arm clears by training.
     do_nothing_mean: float = 0.0
+    # The GENERAL-KNOWLEDGE guard's own noise, measured from the same null series.
+    # It is a separate quantity from `noise_sd` because it is measured on a
+    # different target with a different spread, and because it is the one that
+    # decides admissibility: the guard tolerance is a fixed 0.030 borrowed from
+    # upstream, and at 0.6B the recipe's expected cost sits 0.65 sd inside it, so
+    # without this number the gate is a coin flip. See `loop.gate` guard 3.
+    guard_mean: float = 0.0
+    guard_sd: float = 0.0
     # Per-seed sd implied by the null arms, for a paired design.
     paired_sd: float = 0.0
     # What we can detect, per seed budget, at alpha=0.05 one-sided and 80% power.
@@ -235,7 +243,8 @@ def increment_resolvable(paired_sd: float, n_seeds: int, *,
 
 
 def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
-            fallback_sd: float = 0.011) -> PowerResult:
+            fallback_sd: float = 0.011,
+            guard_deltas: Sequence[float] = ()) -> PowerResult:
     """Turn measured null arms into a bar.
 
     `null_deltas` are the control-minus-candidate differences from arms that are
@@ -257,6 +266,16 @@ def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
     # had already run. `power.json` read n_null_arms 1, null_deltas [0.0665],
     # noise_max_abs 0.0 and a bar of 0.020.
     res.noise_max_abs = max((abs(d) for d in null_deltas), default=0.0)
+
+    # The guard's own spread, from the same replicas. A spread needs >= 2 points,
+    # and with fewer this stays 0.0 — which `loop.gate` reads as "no band", i.e.
+    # the plain tolerance, i.e. upstream's rule unchanged. That is the right
+    # degradation: an unmeasured band must not silently become a wide one.
+    g = [d for d in guard_deltas if d is not None and math.isfinite(d)]
+    if g:
+        res.guard_mean = statistics.fmean(g)
+    if len(g) >= 2:
+        res.guard_sd = statistics.stdev(g)
 
     if len(null_deltas) >= 2:
         res.noise_sd = statistics.stdev(null_deltas)
@@ -329,6 +348,10 @@ def analyse(null_deltas: Sequence[float], *, planned_seeds: int = 2,
         f"paired sd used:     {res.paired_sd:.4f}",
         f"doing nothing buys: {res.do_nothing_mean:+.4f}"
         + ("" if null_deltas else "  (NOT MEASURED — no null arm has run)"),
+        f"guard cost      : {res.guard_mean:+.4f}"
+        + (f"  sd {res.guard_sd:.4f} (tolerance 0.0300, so the recipe's "
+           f"admissibility is {'UNDECIDABLE at one seed' if res.guard_sd and abs(res.guard_mean) < 0.030 + res.guard_sd else 'decidable'})"
+           if g else "  (NOT MEASURED)"),
         f"MDE by seed budget: " + ", ".join(f"{n}s={v:.4f}" for n, v in res.mde.items()
                                            if math.isfinite(v) and v > 0),
         f"bar at {planned_seeds} seeds: +{res.recommended_bar:.4f}  [{res.bar_rule}]",

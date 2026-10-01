@@ -100,7 +100,7 @@ def main() -> int:
 
     corpus = Path(a.corpus)
     if not corpus.is_dir() or not list(corpus.glob("*.jsonl")):
-        log(f"NO CORPUS in {corpus} — run scripts/build_corpus.py first")
+        log(f"NO CORPUS in {corpus} — run scripts/build_replication_corpus.py first")
         return 1
 
     # 0. THE HALT. Checked before anything else, because a critical agent that
@@ -473,13 +473,14 @@ def main() -> int:
         # bar a ratchet: each result raised the threshold for the next one.
         records = read_records()
         deltas = agenda.null_deltas(records)
+        gdeltas = agenda.null_guard_deltas(records)
         skipped = sum(1 for r in records
                       if not agenda.is_null_series(str(r.get("arm", ""))))
         # At the budget a DECISIVE arm is actually judged at, not a constant typed
         # in here. `decisive` runs 3 seeds; deriving the bar at 2 described a design
         # that does not exist and made the bar stricter than the gate that used it.
         planned = confirm.seeds_for("decisive")
-        pr = power.analyse(deltas, planned_seeds=planned)
+        pr = power.analyse(deltas, planned_seeds=planned, guard_deltas=gdeltas)
         power.save(pr)
         # Say which path produced the number. With one null arm the sd is NOT
         # measured — it is the fallback — and printing a measured-looking 0.0000
@@ -491,6 +492,7 @@ def main() -> int:
             src = (f"sd=0.011 FALLBACK (only {pr.n_null_arms} null arm; a floor needs "
                    f">=2 to have a spread)")
         log(f"POWER     {src}  do-nothing {pr.do_nothing_mean:+.4f}  "
+            f"guard {pr.guard_mean:+.4f}±{pr.guard_sd:.4f}  "
             f"bar=+{pr.recommended_bar:.4f} at {planned} seeds  [{pr.bar_rule}]"
             + (f"  ({skipped} non-null arm(s) excluded from the floor)" if skipped else ""))
 

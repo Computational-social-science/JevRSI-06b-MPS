@@ -77,7 +77,7 @@ def main() -> int:
     print("\nend-to-end parity on real data, through upstream's own predict()")
     corpus = ROOT / "corpus" / "synth.jsonl"
     if not corpus.is_file():
-        check("corpus present for the e2e leg", False, "run scripts/build_corpus.py")
+        check("corpus present for the e2e leg", False, "run scripts/build_replication_corpus.py")
         return 1
     cases = load_cases(str(corpus))[:24]
     import dev as devmod

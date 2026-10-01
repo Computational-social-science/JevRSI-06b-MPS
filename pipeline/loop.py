@@ -287,14 +287,49 @@ def gate(cand: ArmResult) -> tuple[bool, list[str], str]:
     # --- guard 3: general knowledge must not be bought with forgetting
     # Upstream's MMLU-Pro guard: within 0.030 of the control. Matched by
     # substring so a differently-named target in our own suite still hits it.
+    #
+    # AND THE GUARD CANNOT DO ITS JOB AT ONE SEED, WHICH IS THE POINT OF THE BAND
+    # BELOW. Upstream rejected its single largest data-axis arm — "worth +0.12 —
+    # and it costs general knowledge, so it was rejected" — on exactly this
+    # trade-off. This guard is the only thing standing between us and repeating
+    # that promotion, so it has to be able to see the cost.
+    #
+    # Measured here, over three independently seeded replicas of the champion
+    # recipe, the recipe's MMLU-Pro cost is -0.0450 with a sd of 0.0229, against
+    # a tolerance of 0.030. The expectation sits 0.65 sd INSIDE the band, which
+    # means the verdict is decided by the seed and not by the recipe: null_floor
+    # came in at -0.025 and passed, null1 at -0.040 and failed, the confirmation
+    # at -0.070 and failed. Three runs of one recipe, three different answers to
+    # "is this recipe admissible".
+    #
+    # So a guard difference smaller than the guard's own noise is not a pass and
+    # not a fail. It is UNRESOLVED, and it is recorded under its own name so it
+    # routes to the repair path — which is upstream's own disposition for an arm
+    # that fails exactly one guard: a diagnosis and a targeted repair, and a
+    # discard only if the repair fails too. Here the diagnosis is literally "run
+    # another seed", and the repair is exactly that.
+    #
+    # A plain tolerance check here would be a coin flip wearing a threshold's
+    # clothes, and it has already produced one keeper crowned on a lucky seed.
+    guard_band = 0.0
+    try:
+        import power as _pw
+        _p = _pw.load()
+        if _p is not None and _p.guard_sd > 0:
+            guard_band = _p.guard_sd
+    except Exception:
+        guard_band = 0.0
     for tname, ctv in (cand.per_target_top1 or {}).items():
         if not _is_guard(tname):
             continue
         ctl = (cand.per_target_top1_control or {}).get(tname)
         if ctl is None:
             continue
-        if abs(ctv - ctl) > GUARD_TOL:
+        drop = abs(ctv - ctl)
+        if drop > GUARD_TOL + guard_band:
             failed.append(f"guard:{tname}")
+        elif drop > GUARD_TOL - guard_band:
+            failed.append(f"guard:{tname}:unresolved")
 
     if not failed:
         reason = reason_bar
