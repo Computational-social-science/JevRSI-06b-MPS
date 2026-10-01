@@ -375,6 +375,18 @@ def main() -> int:
     # unnoticed for an entire arm.
     res.contamination = _check_contamination(res)
 
+    # An arm that is NOT kept still leaves weights on disk -- `confirm__null_floor`
+    # left 1.7 GB behind -- and a record carrying a checkpoint path with a BLANK
+    # artifact field is indistinguishable from a kept arm whose verification
+    # silently did not run. The field is therefore never left ambiguous: a
+    # checkpoint belonging to an arm that will not be published says so, in
+    # words. A blank field is what made this invisible, and a blank field is
+    # never the right answer to "was this verified".
+    if res.checkpoint and not res.artifact:
+        res.artifact = (f"not a deliverable: verdict is {res.verdict}"
+                        if res.verdict != "kept"
+                        else "UNVERIFIED: verification did not run")
+
     # ONE record per arm, written after the verdict is final.
     append_record(res)
     _report(res, champ)

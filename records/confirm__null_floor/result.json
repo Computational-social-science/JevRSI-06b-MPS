@@ -1,0 +1,62 @@
+{
+  "arm": "confirm__null_floor",
+  "axis": "training",
+  "change": "confirmation of null_floor on fresh seed 9001: identical recipe, the one number it was not selected on",
+  "champion": "none (first arm: no champion yet)",
+  "pooled_top1_candidate": 0.508,
+  "pooled_top1_control": 0.4645,
+  "min_decision_score_candidate": 1.2987012987012962,
+  "min_decision_score_control": 6.493506493506493,
+  "pooled_aurc_candidate": 0.38851809629186995,
+  "pooled_aurc_control": 0.40304980420715664,
+  "ece_candidate": 0.06549525340398153,
+  "ece_control": 0.15428468917806945,
+  "n_questions": 2000,
+  "targets_used": [
+    "in_distribution",
+    "mmlu_pro_guard",
+    "typed_decisions"
+  ],
+  "contamination": "clean: 7414 train vs 600 eval, 0 exact / 0 near",
+  "artifact": "",
+  "champion_delta": null,
+  "champion_arm": "",
+  "role": "",
+  "expected_effect": null,
+  "seeds_required": 1,
+  "seeds_done": 0,
+  "per_target_top1": {
+    "in_distribution": 0.7299836601307189,
+    "typed_decisions": 0.508,
+    "mmlu_pro_guard": 0.145
+  },
+  "per_target_top1_control": {
+    "in_distribution": 0.5674019607843137,
+    "typed_decisions": 0.4645,
+    "mmlu_pro_guard": 0.215
+  },
+  "passed": false,
+  "verdict": "",
+  "reason": "",
+  "guards_failed": [],
+  "n_failed_guards": 0,
+  "prereg": {
+    "arm": "confirm__null_floor",
+    "axis": "training",
+    "change": "confirmation of null_floor on fresh seed 9001: identical recipe, the one number it was not selected on",
+    "prediction": "null_floor cleared the bar at +0.0665 on the run it was selected on. This run is on a seed it has never used. If the delta holds at or above 0.0060, the effect is real; if it falls under, the first run was seed luck and the arm is recorded as seed-sensitive rather than as an effect.",
+    "delta_floor": 0.006,
+    "direction": "up",
+    "null_floor_vs": "none (first arm: no champion yet)",
+    "expected_effect": 0.0665,
+    "source": "confirmation of null_floor (fresh seed 9001)",
+    "role": "exploratory",
+    "seeds_required": 1,
+    "ts": 1790835033.0318542
+  },
+  "train_seconds": 3444,
+  "final_loss": 0.9075086116790771,
+  "error": "",
+  "checkpoint": "/Users/huzhiwen/research/rsijev-06b/ckpt/confirm__null_floor",
+  "ts": 1790835035.981427
+}

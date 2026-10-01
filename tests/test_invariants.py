@@ -169,6 +169,25 @@ def main() -> int:
     check("... and shows the sequence", "0.1400" in " ".join(f4.evidence),
           str(f4.evidence))
 
+    print("\nI6 with a STALE arm log and no live process  (the bug that shipped)")
+    # `running_arm()` used to read the most recent arm log, which is simply the
+    # name of the last arm that ever ran. Those files are never deleted, so the
+    # loop looked permanently mid-arm, I6 reported a correctly-ordered search as
+    # out of order, and the critical agent halted a search that was fine. The
+    # only way to see that is to make the log lie while no process is running.
+    import invariants as _inv
+    saved_probe2 = _inv.running_arm
+    try:
+        _inv.running_arm = lambda: None            # no run_one.py process alive
+        F = run_isolated(lambda t: (
+            write(t / "prereg.jsonl", []), write(t / "arms.jsonl", [])),
+            in_flight=None)
+        f6 = find(F, "I6")
+        check("I6 is quiet when no process is alive, however stale the logs",
+              f6.ok, f6.detail[:50])
+    finally:
+        _inv.running_arm = saved_probe2
+
     print("\nI7: a keeper short a seed")
     F = run_isolated(lambda t: (
         write(t / "prereg.jsonl", []),
@@ -191,7 +210,7 @@ def main() -> int:
     f9 = find(F, "I9")
     check("I9 fires on an unchecked arm", not f9.ok, f9.detail[:60])
 
-    print("\nI10: a published checkpoint that was never verified")
+    print("\nI10: a KEPT arm's checkpoint must be verified; a FAILED arm's must not be")
     F = run_isolated(lambda t: (
         write(t / "prereg.jsonl", [{"arm": "x", "delta_floor": 0.006, "direction": "up"}]),
         write(t / "arms.jsonl", [{"arm": "x", "verdict": "kept", "checkpoint": "ckpt/x",
@@ -199,7 +218,34 @@ def main() -> int:
                                   "pooled_top1_candidate": 0.7,
                                   "pooled_top1_control": 0.46}])))
     f10 = find(F, "I10")
-    check("I10 fires", not f10.ok, f10.detail[:60])
+    check("I10 fires on a KEPT arm with no artifact field", not f10.ok, f10.detail[:60])
+
+    # The distinction the first version missed. A checkpoint belonging to an arm
+    # that failed its fresh-seed confirmation is EVIDENCE, not a product; treating
+    # it as an unverified publication raised a critical and halted a search that
+    # was correct. This is the exact shape of `confirm__null_floor`.
+    F = run_isolated(lambda t: (
+        write(t / "prereg.jsonl", []),
+        write(t / "arms.jsonl", [{"arm": "confirm__null_floor",
+                                  "verdict": "not_confirmed", "checkpoint": "ckpt/c",
+                                  "artifact": "not a deliverable: verdict is not_confirmed",
+                                  "contamination": "clean",
+                                  "pooled_top1_candidate": 0.508,
+                                  "pooled_top1_control": 0.4645}])))
+    f10b = find(F, "I10")
+    check("I10 is quiet on a FAILED arm's checkpoint when it is marked as evidence",
+          f10b.ok, f10b.detail[:60])
+
+    F = run_isolated(lambda t: (
+        write(t / "prereg.jsonl", []),
+        write(t / "arms.jsonl", [{"arm": "c", "verdict": "not_confirmed",
+                                  "checkpoint": "ckpt/c", "artifact": "",
+                                  "contamination": "clean",
+                                  "pooled_top1_candidate": 0.5,
+                                  "pooled_top1_control": 0.46}])))
+    f10c = find(F, "I10")
+    check("... but a BLANK artifact field fires regardless of verdict",
+          not f10c.ok, f10c.detail[:60])
 
     print("\nI11: two kernel stacks in one search")
     F = run_isolated(lambda t: (

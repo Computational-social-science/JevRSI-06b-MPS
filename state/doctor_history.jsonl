@@ -36,3 +36,6 @@
 {"when": 1790840487.8234181, "when_h": "2026-10-01 15:41:27", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
 {"when": 1790840496.7720299, "when_h": "2026-10-01 15:41:36", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
 {"when": 1790840813.569719, "when_h": "2026-10-01 15:46:53", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}
+{"when": 1790840871.529491, "when_h": "2026-10-01 15:47:51", "verdict": "wrong", "ok": false, "criticals": [], "majors": ["methodology/I6"]}
+{"when": 1790840979.577848, "when_h": "2026-10-01 15:49:39", "verdict": "wrong", "ok": false, "criticals": ["integrity/I10"], "majors": []}
+{"when": 1790841149.9076102, "when_h": "2026-10-01 15:52:29", "verdict": "healthy", "ok": true, "criticals": [], "majors": []}

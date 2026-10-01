@@ -1,8 +1,8 @@
 {
   "verdict": "healthy",
   "ok": true,
-  "when": 1790840813.569719,
-  "when_h": "2026-10-01 15:46:53",
+  "when": 1790841149.9076102,
+  "when_h": "2026-10-01 15:52:29",
   "auditors": {
     "vitals": {
       "n": 7,
@@ -83,7 +83,7 @@
           "severity": "major",
           "detail": "silence past the deadline is a wedge; silence before it is a slow pass",
           "evidence": [
-            "last arm-log write 187s ago"
+            "last arm-log write 0s ago"
           ],
           "repair": ""
         }
@@ -100,9 +100,9 @@
           "title": "every result has a prediction registered before it",
           "ok": true,
           "severity": "critical",
-          "detail": "1 result(s), all preregistered",
+          "detail": "2 result(s), all preregistered",
           "evidence": [
-            "1 results, 3 preregs"
+            "2 results, 4 preregs"
           ],
           "repair": ""
         },
@@ -113,7 +113,7 @@
           "severity": "major",
           "detail": "none dangling",
           "evidence": [
-            "in flight: confirm__null_floor"
+            "in flight: null1"
           ],
           "repair": ""
         },
@@ -165,8 +165,7 @@
           "detail": "in order",
           "evidence": [
             "queue head: null1",
-            "in flight : confirm__null_floor",
-            "pending confirmation takes precedence"
+            "in flight : null1"
           ],
           "repair": ""
         },
@@ -207,7 +206,7 @@
           "severity": "critical",
           "detail": "verified per arm",
           "evidence": [
-            "1 arm(s) all checked"
+            "2 arm(s) all checked"
           ],
           "repair": ""
         },
@@ -215,8 +214,8 @@
           "invariant": "I10",
           "title": "a published artifact reproduced its training run",
           "ok": true,
-          "severity": "critical",
-          "detail": "verified",
+          "severity": "info",
+          "detail": "every kept artifact verified; non-kept checkpoints are marked as evidence, not deliverables",
           "evidence": [
             "none pending"
           ],
@@ -257,8 +256,9 @@
           "title": "every headline number recomputes from its raw rows",
           "ok": true,
           "severity": "info",
-          "detail": "1 most recent arm(s) recomputed from raw per-question rows",
+          "detail": "2 most recent arm(s) recomputed from raw per-question rows",
           "evidence": [
+            "18592 raw rows, 6 per-target numbers recomputed",
             "18592 raw rows, 6 per-target numbers recomputed"
           ],
           "repair": ""
@@ -268,9 +268,10 @@
           "title": "every delta follows from its own candidate and control",
           "ok": true,
           "severity": "info",
-          "detail": "null_floor: delta not recorded, pooled pair is self-consistent",
+          "detail": "2 checks agree; first: null_floor: delta not recorded, pooled pair is self-consistent",
           "evidence": [
-            "no champion_delta recorded; pooled candidate - control = +0.066500"
+            "no champion_delta recorded; pooled candidate - control = +0.066500",
+            "no champion_delta recorded; pooled candidate - control = +0.043500"
           ],
           "repair": ""
         },
@@ -281,8 +282,8 @@
           "severity": "info",
           "detail": "the control is shared by every arm",
           "evidence": [
-            "1 distinct control value(s) across 1 arm(s)",
-            "control 0.464500: null_floor"
+            "1 distinct control value(s) across 2 arm(s)",
+            "control 0.464500: null_floor, confirm__null_floor"
           ],
           "repair": ""
         },

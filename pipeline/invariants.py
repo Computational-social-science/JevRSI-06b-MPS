@@ -115,13 +115,41 @@ def _delta(r: dict) -> float | None:
 
 
 def running_arm() -> str | None:
-    """Which arm is in flight, from the most recent arm log."""
-    logs = sorted(LOGS.glob("arm_*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
-    if not logs:
-        return None
+    """Which arm is in flight RIGHT NOW — or None, meaning none is.
+
+    The first version inferred this from the most recent `arm_*.log`, which is
+    simply the name of the last arm that ever ran. Those files are never deleted,
+    so the function answered "in flight" for the previous arm for as long as the
+    pipeline existed, and invariant I6 then reported a perfectly ordered loop as
+    running out of order — queue head `null1`, in flight `confirm__null_floor`,
+    an arm that had exited. It raised a `major`, the arbiter called the science
+    wrong, and the critical agent HALTED a search that was behaving correctly.
+
+    A log file records that something happened. It cannot record that something
+    is still happening, and conflating the two is the whole bug. So the liveness
+    signal is the PROCESS, and the log is only used to learn WHICH arm it is:
+
+      * no `run_one.py` process  ->  nothing is in flight, full stop;
+      * a process exists         ->  name it from the newest log that matches.
+
+    The log is now a label, not a claim.
+    """
     import re
-    m = re.search(r"=== ARM (\S+) \(", logs[0].read_text(errors="ignore")[-6000:])
-    return m.group(1) if m else None
+    import subprocess
+    # The process is the fact. Everything else is a guess about which arm it is.
+    try:
+        live = subprocess.run(["pgrep", "-f", "run_one.py"],
+                              capture_output=True, text=True).returncode == 0
+    except OSError:
+        live = False
+    if not live:
+        return None
+    logs = sorted(LOGS.glob("arm_*.log"), key=lambda p: p.stat().st_mtime, reverse=True)
+    for p in logs[:3]:
+        m = re.search(r"=== ARM (\S+) \(", p.read_text(errors="ignore")[-6000:])
+        if m:
+            return m.group(1)
+    return None
 
 
 def check_all() -> list[Finding]:
@@ -307,15 +335,45 @@ def check_all() -> list[Finding]:
                      repair=""))
 
     # ---- I10 published artifacts reproduce their run
-    unver = [r.get("arm") for r in arms
-             if r.get("checkpoint") and not r.get("artifact")]
+    #
+    # Two distinct failures, and conflating them is what made the original
+    # version useless. A KEPT arm with a checkpoint and no verification is a
+    # critical: that model is the deliverable. A NON-KEPT arm with a checkpoint is
+    # not a critical at all — `confirm__null_floor` failed its fresh-seed
+    # confirmation and left 1.7 GB of weights behind; those weights are evidence,
+    # not a product, and nobody is publishing them. The first version treated
+    # both as the same thing and so reported a critical on a search that was
+    # behaving correctly.
+    #
+    # What it must still catch is the AMBIGUOUS case: a checkpoint with a blank
+    # artifact field, which is indistinguishable from a kept arm whose
+    # verification silently did not run. A blank field is never an acceptable
+    # answer to "was this verified" in either direction.
+    unver, ambiguous = [], []
+    for r in arms:
+        if not r.get("checkpoint"):
+            continue
+        art = r.get("artifact")
+        if not art:
+            unver.append(r.get("arm"))
+        elif r.get("verdict") == "kept" and not art.startswith("verified"):
+            ambiguous.append(f"{r.get('arm')}: {art}")
+    ev = []
+    if unver:
+        ev.append(f"checkpoint with NO artifact field at all: {unver}")
+    if ambiguous:
+        ev.append(f"kept arm whose artifact is not a verification: {ambiguous}")
     F.append(Finding("I10", "a published artifact reproduced its training run",
-                     ok=not unver, severity="critical",
+                     ok=not (unver or ambiguous),
+                     severity="critical" if (unver or ambiguous) else "info",
                      detail=("a checkpoint that does not reload to the same "
                              "predictions is not the model the numbers came from"
-                             if unver else "verified"),
-                     evidence=[f"unverified: {unver}"] if unver else ["none pending"],
-                     repair=""))
+                             if (unver or ambiguous) else
+                             "every kept artifact verified; non-kept checkpoints "
+                             "are marked as evidence, not deliverables"),
+                     evidence=ev or ["none pending"],
+                     repair=("run verify_ckpt, or mark the checkpoint as evidence"
+                             if (unver or ambiguous) else "")))
 
     # ---- I11 one kernel stack
     stacks = set()

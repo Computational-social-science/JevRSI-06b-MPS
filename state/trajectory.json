@@ -1,8 +1,8 @@
 {
-  "generated": 1790833798.492975,
+  "generated": 1790840897.3440099,
   "backbone": "Qwen/Qwen3-0.6B-Base",
-  "n_arms": 1,
-  "n_prereg": 1,
+  "n_arms": 2,
+  "n_prereg": 2,
   "n_kept": 0,
   "n_rejected": 0,
   "n_needs_repair": 0,
@@ -47,6 +47,47 @@
       "train_seconds": 3316,
       "final_loss": 0.6331608295440674,
       "ts": 1790827812.1783419
+    },
+    {
+      "arm": "confirm__null_floor",
+      "axis": "training",
+      "change": "confirmation of null_floor on fresh seed 9001: identical recipe, the one number it was not selected on",
+      "prediction": "null_floor cleared the bar at +0.0665 on the run it was selected on. This run is on a seed it has never used. If the delta holds at or above 0.0060, the effect is real; if it falls under, the first run was seed luck and the arm is recorded as seed-sensitive rather than as an effect.",
+      "expected_effect": 0.0665,
+      "underpowered": false,
+      "delta_floor": 0.006,
+      "null_floor_vs": "none (first arm: no champion yet)",
+      "top1_candidate": 0.508,
+      "top1_control": 0.4645,
+      "delta": 0.04349999999999998,
+      "min_decision_score": 1.2987012987012962,
+      "ece": 0.06549525340398153,
+      "n_questions": 2000,
+      "targets": [
+        "in_distribution",
+        "mmlu_pro_guard",
+        "typed_decisions"
+      ],
+      "per_target": {
+        "in_distribution": 0.7299836601307189,
+        "typed_decisions": 0.508,
+        "mmlu_pro_guard": 0.145
+      },
+      "per_target_control": {
+        "in_distribution": 0.5674019607843137,
+        "typed_decisions": 0.4645,
+        "mmlu_pro_guard": 0.215
+      },
+      "verdict": "not_confirmed",
+      "passed": false,
+      "guards_failed": [
+        "guard:mmlu_pro_guard"
+      ],
+      "reason": "confirmation of null_floor FAILED: this seed reached +0.0435 against a bar of +0.0060. The arm cleared the bar on the run it was selected on and did not on a seed it was not, which is seed sensitivity and not an effect. null_floor does not take the crown.",
+      "error": "",
+      "train_seconds": 3444,
+      "final_loss": 0.9075086116790771,
+      "ts": 1790835035.981427
     }
   ]
 }

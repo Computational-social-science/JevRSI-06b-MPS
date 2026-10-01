@@ -1,6 +1,6 @@
 # RSI-Jev on Qwen3-0.6B — research record
 
-*Generated 2026-10-01 13:49:58 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
+*Generated 2026-10-01 15:48:17 CST from `records/prereg.jsonl`, `records/arms.jsonl` and*
 *`state/champions.jsonl`. Not maintained by hand: it cannot drift from the*
 *data, because it is a projection of the data.*
 
@@ -105,11 +105,12 @@ The order is derived from the power analysis, not hand-written, so a change in t
 
 ## 6. Results
 
-1 arms: **0 kept**, 0 published negatives, 0 needing repair, 0 errors.
+2 arms: **0 kept**, 0 published negatives, 0 needing repair, 0 errors.
 
 | arm | role | Δ vs control | expected | contamination | verdict |
 |---|---|---|---|---|---|
-| `null_floor` | — | +0.0665 | +0.0000 | **NOT CHECKED** | kept_pending_confirm |
+| `null_floor` | — | +0.0665 | +0.0000 | verified retroactively: clean: 7414 tr | kept_pending_confirm |
+| `confirm__null_floor` | exploratory | +0.0435 | +0.0665 | clean | not_confirmed |
 
 ## 7. Reference points
 
